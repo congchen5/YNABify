@@ -1,0 +1,19 @@
+# YNAB API client
+ynab-sdk-python>=1.0.0
+
+# Environment variable management
+python-dotenv>=1.0.0
+
+# HTTP requests
+requests>=2.31.0
+
+# Email parsing (for Venmo notifications)
+imapclient>=2.3.1
+pyzmail36>=1.0.5
+
+# Web scraping (for Amazon if needed)
+beautifulsoup4>=4.12.0
+selenium>=4.15.0
+
+# Data handling
+python-dateutil>=2.8.2
