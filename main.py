@@ -28,8 +28,12 @@ def match_amazon_to_ynab(amazon_txn: dict, ynab_transactions: list) -> dict:
     amazon_amount_milliunits = int(-amazon_amount * 1000)
 
     for ynab_txn in ynab_transactions:
-        # Parse YNAB transaction date
-        ynab_date = ynab_txn.date
+        # Parse YNAB transaction date (convert from string to date object)
+        from datetime import datetime
+        if isinstance(ynab_txn.date, str):
+            ynab_date = datetime.strptime(ynab_txn.date, '%Y-%m-%d').date()
+        else:
+            ynab_date = ynab_txn.date
 
         # Check if dates match (within 1 day tolerance)
         date_diff = abs((amazon_date - ynab_date).days)
@@ -220,6 +224,15 @@ def main():
                     })
                 else:
                     print(f"    ✗ No matching YNAB transaction found")
+                    # Debug: Show potential matches
+                    print(f"      Looking for: Date={txn['date'].date()}, Amount=-${txn['amount']:.2f}, Payee contains 'Amazon'")
+                    # Show YNAB transactions on same date
+                    same_date_txns = [t for t in ynab_transactions
+                                     if datetime.strptime(str(t.date), '%Y-%m-%d').date() == txn['date'].date()]
+                    if same_date_txns:
+                        print(f"      Found {len(same_date_txns)} YNAB transaction(s) on {txn['date'].date()}:")
+                        for t in same_date_txns[:10]:  # Show up to 10
+                            print(f"        - {t.payee_name}: ${t.amount/1000:.2f}")
 
                 print()  # Empty line between transactions
 

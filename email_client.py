@@ -206,7 +206,7 @@ class EmailClient:
 
     def parse_amazon_email(self, email_dict: Dict) -> Optional[Dict]:
         """
-        Parse Amazon order confirmation email
+        Parse Amazon order confirmation email (including forwarded emails)
 
         Args:
             email_dict: Email dictionary from get_unread_emails
@@ -218,9 +218,36 @@ class EmailClient:
             body = email_dict['body']
             soup = BeautifulSoup(body, 'html.parser')
 
-            # Extract order number
-            order_match = re.search(r'Order\s*#?\s*(\d{3}-\d{7}-\d{7})', body, re.IGNORECASE)
+            # Debug: Print more of body to see order details
+            print(f"\n  DEBUG: Searching for order number and total...")
+            # Look for order number
+            order_search = re.search(r'(Order.{0,50}\d{3}-\d{7}-\d{7})', body, re.IGNORECASE | re.DOTALL)
+            if order_search:
+                print(f"  Found order pattern: {order_search.group(1)[:100]}")
+            # Look for various total patterns
+            total_patterns = [
+                r'Order Total[:\s]*\$?([\d,]+\.\d{2})',
+                r'Grand Total[:\s]*\$?([\d,]+\.\d{2})',
+                r'Total[:\s]*\$?([\d,]+\.\d{2})',
+            ]
+            found_total = False
+            for pattern in total_patterns:
+                total_search = re.search(pattern, body, re.IGNORECASE)
+                if total_search:
+                    print(f"  Found total with pattern '{pattern}': ${total_search.group(1)}")
+                    found_total = True
+                    break
+
+            if not found_total:
+                # Show all dollar amounts found
+                dollar_amounts = re.findall(r'\$(\d+\.\d{2})', body)
+                print(f"  Total not found. All dollar amounts in email: {dollar_amounts[:10]}")
+
+            # Extract order number (handle HTML entities and special chars)
+            order_match = re.search(r'(\d{3}-\d{7}-\d{7})', body)
             order_number = order_match.group(1) if order_match else None
+            if order_number:
+                print(f"  Extracted order number: {order_number}")
 
             # Extract order details link
             order_details_url = None
@@ -241,17 +268,42 @@ class EmailClient:
                         order_details_url = f"https://www.amazon.com{href}"
 
             # Extract total amount
-            # Amazon emails typically have "Order Total: $XX.XX"
-            total_match = re.search(r'(?:Order\s+Total|Total)[:\s]+\$?([\d,]+\.\d{2})', body, re.IGNORECASE)
-            amount = float(total_match.group(1).replace(',', '')) if total_match else None
+            # Try to find "Order Total" first
+            total_match = re.search(r'(?:Order\s+Total|Grand\s+Total)[:\s]*\$?([\d,]+\.\d{2})', body, re.IGNORECASE)
 
-            # Extract order date from email date
-            try:
-                date_str = email_dict['date']
-                # Parse email date format
-                order_date = datetime.strptime(date_str.split(',')[1].strip()[:20], '%d %b %Y %H:%M:%S')
-            except:
-                order_date = datetime.now()
+            if not total_match:
+                # Fallback: Use the first dollar amount found (usually the order total in forwarded emails)
+                all_amounts = re.findall(r'\$(\d+\.\d{2})', body)
+                if all_amounts:
+                    # The first amount is typically the order total
+                    total_match_str = all_amounts[0]
+                    amount = float(total_match_str.replace(',', ''))
+                    print(f"  Using first dollar amount as total: ${amount}")
+                else:
+                    amount = None
+            else:
+                amount = float(total_match.group(1).replace(',', ''))
+
+            # Extract order date from email
+            # For forwarded emails, try to extract original date from forwarding header
+            order_date = None
+            fwd_date_match = re.search(r'Date:\s+[A-Za-z]+,\s+([A-Za-z]+\s+\d+,\s+\d{4})', body)
+            if fwd_date_match:
+                try:
+                    # Parse "Nov 28, 2025" format
+                    date_str = fwd_date_match.group(1)
+                    order_date = datetime.strptime(date_str, '%b %d, %Y')
+                    print(f"  Extracted order date from forwarded header: {order_date.strftime('%Y-%m-%d')}")
+                except:
+                    pass
+
+            # Fallback to email date if we couldn't parse forwarded date
+            if not order_date:
+                try:
+                    date_str = email_dict['date']
+                    order_date = datetime.strptime(date_str.split(',')[1].strip()[:20], '%d %b %Y %H:%M:%S')
+                except:
+                    order_date = datetime.now()
 
             # Extract items (basic extraction - Amazon emails vary)
             items = []
