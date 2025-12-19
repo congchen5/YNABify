@@ -8,74 +8,11 @@ import os
 from dotenv import load_dotenv
 from ynab_client import YNABClient
 from email_client import EmailClient
+from amazon_integration import AmazonIntegration
+from venmo_integration import VenmoIntegration
 
-
-def match_amazon_to_ynab(amazon_txn: dict, ynab_transactions: list) -> dict:
-    """
-    Find matching YNAB transaction for an Amazon email transaction
-
-    Args:
-        amazon_txn: Amazon transaction from email
-        ynab_transactions: List of YNAB transactions
-
-    Returns:
-        Matching YNAB transaction or None
-    """
-    amazon_date = amazon_txn['date'].date()
-    amazon_amount = amazon_txn['amount']
-
-    # Convert to YNAB milliunits (negative for outflow)
-    amazon_amount_milliunits = int(-amazon_amount * 1000)
-
-    for ynab_txn in ynab_transactions:
-        # Parse YNAB transaction date (convert from string to date object)
-        from datetime import datetime
-        if isinstance(ynab_txn.date, str):
-            ynab_date = datetime.strptime(ynab_txn.date, '%Y-%m-%d').date()
-        else:
-            ynab_date = ynab_txn.date
-
-        # Check if dates match (within 1 day tolerance)
-        date_diff = abs((amazon_date - ynab_date).days)
-        if date_diff > 1:
-            continue
-
-        # Check if amount matches (YNAB stores in milliunits)
-        if ynab_txn.amount != amazon_amount_milliunits:
-            continue
-
-        # Check if payee contains "Amazon"
-        payee_name = ynab_txn.payee_name or ""
-        if "amazon" in payee_name.lower():
-            return ynab_txn
-
-    return None
-
-
-def format_amazon_memo(transaction: dict) -> str:
-    """
-    Format memo for Amazon transaction in YNAB
-
-    Args:
-        transaction: Amazon transaction dictionary
-
-    Returns:
-        Formatted memo string
-    """
-    memo_parts = []
-
-    # Add items (first 3)
-    if transaction.get('items'):
-        items = transaction['items'][:3]
-        memo_parts.append(', '.join(items))
-        if len(transaction['items']) > 3:
-            memo_parts.append(f'+{len(transaction["items"]) - 3} more')
-
-    # Add order details link
-    if transaction.get('order_details_url'):
-        memo_parts.append(transaction['order_details_url'])
-
-    return ' | '.join(memo_parts) if memo_parts else f"Order {transaction.get('order_number', '')}"
+# Configuration
+DEBUG_TRANSACTION_LIMIT = 1  # Limit number of transactions to process for debugging
 
 
 def check_required_env_vars() -> bool:
@@ -178,88 +115,29 @@ def main():
     if email_client:
         print("\n=== Fetching Transactions from Email ===\n")
 
-        # Get Amazon transactions
-        print("Fetching Amazon transactions...")
-        amazon_transactions = email_client.get_amazon_transactions(limit=10)
+        # Initialize integrations
+        amazon_integration = AmazonIntegration(ynab_client, email_client)
+        venmo_integration = VenmoIntegration(ynab_client, email_client)
 
-        if amazon_transactions:
-            print(f"\n=== Amazon Email Transactions ({len(amazon_transactions)}) ===\n")
+        # Process Amazon transactions
+        amazon_matches = amazon_integration.process_emails(
+            limit=DEBUG_TRANSACTION_LIMIT,
+            ynab_transactions=ynab_transactions
+        )
 
-            matches = []
-            for idx, txn in enumerate(amazon_transactions, 1):
-                date_str = txn['date'].strftime('%Y-%m-%d')
-                amount_str = f"${txn['amount']:.2f}" if txn['amount'] else "N/A"
+        # Summary for Amazon
+        if amazon_matches:
+            print(f"\n=== Summary ===")
+            print(f"Found {len(amazon_matches)} Amazon matches")
+            print(f"\nTo update these transactions, the bot would:")
+            print(f"  1. Update the memo with item details + order link")
+            print(f"  2. Keep the transaction UNAPPROVED (you review in YNAB)")
+            print(f"  3. Mark the email as read")
+        elif amazon_matches is not None:
+            print("\n✗ No matches found between Amazon emails and YNAB transactions")
 
-                print(f"[{idx}] Amazon Email Transaction:")
-                print(f"    Date: {date_str}")
-                print(f"    Amount: {amount_str}")
-                print(f"    Order: {txn['order_number']}")
-
-                # Show items if available
-                if txn.get('items'):
-                    items_preview = ', '.join(txn['items'][:3])  # Show first 3 items
-                    if len(txn['items']) > 3:
-                        items_preview += f" +{len(txn['items']) - 3} more"
-                    print(f"    Items: {items_preview}")
-
-                # Try to match with YNAB transaction
-                ynab_match = match_amazon_to_ynab(txn, ynab_transactions)
-
-                if ynab_match:
-                    print(f"    ✓ MATCHED YNAB Transaction:")
-                    print(f"      ID: {ynab_match.id}")
-                    print(f"      Payee: {ynab_match.payee_name}")
-                    print(f"      Amount: ${ynab_match.amount / 1000:.2f}")
-                    print(f"      Current Memo: {ynab_match.memo or '(empty)'}")
-                    print(f"      Approved: {'Yes' if ynab_match.approved else 'No'}")
-
-                    # Show what the new memo would be
-                    new_memo = format_amazon_memo(txn)
-                    print(f"      Proposed Memo: {new_memo}")
-
-                    matches.append({
-                        'amazon': txn,
-                        'ynab': ynab_match,
-                        'new_memo': new_memo
-                    })
-                else:
-                    print(f"    ✗ No matching YNAB transaction found")
-                    # Debug: Show potential matches
-                    print(f"      Looking for: Date={txn['date'].date()}, Amount=-${txn['amount']:.2f}, Payee contains 'Amazon'")
-                    # Show YNAB transactions on same date
-                    same_date_txns = [t for t in ynab_transactions
-                                     if datetime.strptime(str(t.date), '%Y-%m-%d').date() == txn['date'].date()]
-                    if same_date_txns:
-                        print(f"      Found {len(same_date_txns)} YNAB transaction(s) on {txn['date'].date()}:")
-                        for t in same_date_txns[:10]:  # Show up to 10
-                            print(f"        - {t.payee_name}: ${t.amount/1000:.2f}")
-
-                print()  # Empty line between transactions
-
-            # Summary
-            if matches:
-                print(f"\n=== Summary ===")
-                print(f"Found {len(matches)} matches out of {len(amazon_transactions)} Amazon emails")
-                print(f"\nTo update these transactions, the bot would:")
-                print(f"  1. Update the memo with item details + order link")
-                print(f"  2. Keep the transaction UNAPPROVED (you review in YNAB)")
-                print(f"  3. Mark the email as read")
-            else:
-                print("\n✗ No matches found between Amazon emails and YNAB transactions")
-        else:
-            print("  No unread Amazon transaction emails found")
-
-        # Get Venmo transactions
-        print("\nFetching Venmo transactions...")
-        venmo_transactions = email_client.get_venmo_transactions(limit=10)
-        if venmo_transactions:
-            print(f"\nVenmo Transactions ({len(venmo_transactions)}):")
-            for txn in venmo_transactions:
-                date_str = txn['date'].strftime('%Y-%m-%d')
-                amount_str = f"${txn['amount']:.2f}" if txn['amount'] else "N/A"
-                print(f"  {date_str}: {amount_str} - {txn['description']}")
-        else:
-            print("  No unread Venmo transaction emails found")
+        # Process Venmo transactions
+        venmo_transactions = venmo_integration.process_emails(limit=DEBUG_TRANSACTION_LIMIT)
 
         email_client.disconnect()
 
