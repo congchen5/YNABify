@@ -135,6 +135,18 @@ class AmazonIntegration:
             if not order_number and not amount:
                 return None
 
+            # Extract item name from subject line (format: Fwd: Ordered: "Item Name...")
+            item_name_from_subject = None
+            subject = email_dict['subject']
+            if 'Ordered:' in subject:
+                # Extract text between "Ordered: "" and closing quote or "..."
+                match = re.search(r'Ordered:\s*["\']([^"\']+)', subject)
+                if match:
+                    item_name_from_subject = match.group(1).strip()
+                    # Remove trailing "..." if present
+                    if item_name_from_subject.endswith('...'):
+                        item_name_from_subject = item_name_from_subject[:-3].strip()
+
             return {
                 'source': 'amazon',
                 'order_number': order_number,
@@ -142,6 +154,7 @@ class AmazonIntegration:
                 'date': order_date,
                 'amount': amount,
                 'items': items,
+                'item_name_from_subject': item_name_from_subject,
                 'description': f"Amazon Order {order_number}" if order_number else "Amazon Purchase",
                 'email_subject': email_dict['subject'],
                 'email_id': email_dict['id']
@@ -199,22 +212,25 @@ class AmazonIntegration:
             transaction: Amazon transaction dictionary
 
         Returns:
-            Formatted memo string
+            Formatted memo string: "<item name>. Amazon Link: <url>"
         """
         memo_parts = []
 
-        # Add items (first 3)
-        if transaction.get('items'):
+        # Prefer item name from subject line, fall back to parsed items
+        if transaction.get('item_name_from_subject'):
+            memo_parts.append(f"{transaction['item_name_from_subject']}.")
+        elif transaction.get('items'):
             items = transaction['items'][:3]
-            memo_parts.append(', '.join(items))
+            items_text = ', '.join(items)
             if len(transaction['items']) > 3:
-                memo_parts.append(f'+{len(transaction["items"]) - 3} more')
+                items_text += f' +{len(transaction["items"]) - 3} more'
+            memo_parts.append(f"{items_text}.")
 
-        # Add order details link
+        # Add order details link with "Amazon Link: " prefix
         if transaction.get('order_details_url'):
-            memo_parts.append(transaction['order_details_url'])
+            memo_parts.append(f"Amazon Link: {transaction['order_details_url']}")
 
-        return ' | '.join(memo_parts) if memo_parts else f"Order {transaction.get('order_number', '')}"
+        return ' '.join(memo_parts) if memo_parts else f"Order {transaction.get('order_number', '')}"
 
     def process_emails(self, limit: int, ynab_transactions: List) -> List[Dict]:
         """
@@ -281,6 +297,12 @@ class AmazonIntegration:
                 # Show what the new memo would be
                 new_memo = self.format_memo(txn)
                 print(f"      Proposed Memo: {new_memo}")
+
+                # Update YNAB transaction memo (does not approve)
+                if self.ynab_client.update_transaction_memo(ynab_match.id, new_memo, ynab_match):
+                    print(f"      ✓ Updated YNAB transaction memo")
+                else:
+                    print(f"      ✗ Failed to update YNAB transaction memo")
 
                 matches.append({
                     'amazon': txn,

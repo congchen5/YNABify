@@ -133,6 +133,56 @@ class YNABClient:
             print(f"Error updating transaction: {e}")
             return False
 
+    def update_transaction_memo(
+        self,
+        transaction_id: str,
+        memo: str,
+        existing_transaction
+    ) -> bool:
+        """
+        Update the memo of an existing transaction (does not approve)
+
+        Args:
+            transaction_id: YNAB transaction ID
+            memo: Memo text to set
+            existing_transaction: The existing YNAB transaction object
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            print(f"      DEBUG: Updating transaction {transaction_id}")
+            print(f"      DEBUG: New memo: {memo}")
+            print(f"      DEBUG: Existing approved: {existing_transaction.approved}")
+
+            # Create transaction request with ALL existing data plus new memo
+            transaction = TransactionRequest(
+                account_id=existing_transaction.account_id,
+                date=str(existing_transaction.date),
+                amount=existing_transaction.amount,
+                payee_id=existing_transaction.payee_id,
+                payee_name=existing_transaction.payee_name,
+                category_id=existing_transaction.category_id,
+                memo=memo,
+                cleared=existing_transaction.cleared,
+                approved=existing_transaction.approved,
+                flag_color=existing_transaction.flag_color,
+                import_id=existing_transaction.import_id
+            )
+
+            result = self.transactions_api.update_transaction(
+                self.budget_id,
+                transaction_id,
+                transaction
+            )
+            print(f"      DEBUG: API response: {result}")
+            return True
+        except Exception as e:
+            print(f"Error updating transaction memo: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
     def get_categories(self) -> List:
         """
         Get all budget categories
