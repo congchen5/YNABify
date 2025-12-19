@@ -145,9 +145,7 @@ class AmazonIntegration:
                 match = re.search(r'Ordered:\s*["\']([^"\']+)', subject)
                 if match:
                     item_name_from_subject = match.group(1).strip()
-                    # Remove trailing "..." if present
-                    if item_name_from_subject.endswith('...'):
-                        item_name_from_subject = item_name_from_subject[:-3].strip()
+                    # Keep the "..." to indicate truncation
 
             return {
                 'source': 'amazon',
@@ -214,13 +212,17 @@ class AmazonIntegration:
             transaction: Amazon transaction dictionary
 
         Returns:
-            Formatted memo string: "<item name>. Amazon Link: <url>"
+            Formatted memo string: "<item name>... Amazon Link: <url>" or "<item name>. Amazon Link: <url>"
         """
         memo_parts = []
 
         # Prefer item name from subject line, fall back to parsed items
         if transaction.get('item_name_from_subject'):
-            memo_parts.append(f"{transaction['item_name_from_subject']}.")
+            item_name = transaction['item_name_from_subject']
+            # If item name already ends with "...", keep it; otherwise add a period
+            if not item_name.endswith('...'):
+                item_name += '.'
+            memo_parts.append(item_name)
         elif transaction.get('items'):
             items = transaction['items'][:3]
             items_text = ', '.join(items)
