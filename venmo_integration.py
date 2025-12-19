@@ -123,4 +123,8 @@ class VenmoIntegration:
             amount_str = f"${txn['amount']:.2f}" if txn['amount'] else "N/A"
             print(f"  {date_str}: {amount_str} - {txn['description']}")
 
+            # Mark email as processed
+            self.email_client.label_as_processed(txn['email_id'])
+            print(f"  ✓ Marked email as processed")
+
         return transactions

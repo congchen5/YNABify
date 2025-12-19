@@ -9,16 +9,18 @@ from bs4 import BeautifulSoup
 
 
 class AmazonIntegration:
-    def __init__(self, ynab_client, email_client):
+    def __init__(self, ynab_client, email_client, date_buffer_days=1):
         """
         Initialize Amazon integration
 
         Args:
             ynab_client: YNABClient instance
             email_client: EmailClient instance
+            date_buffer_days: Number of days +/- to search for matching transactions (default: 1)
         """
         self.ynab_client = ynab_client
         self.email_client = email_client
+        self.date_buffer_days = date_buffer_days
 
     def parse_email(self, email_dict: Dict) -> Optional[Dict]:
         """
@@ -173,9 +175,9 @@ class AmazonIntegration:
             else:
                 ynab_date = ynab_txn.date
 
-            # Check if dates match (within 1 day tolerance)
+            # Check if dates match (within configured day tolerance)
             date_diff = abs((amazon_date - ynab_date).days)
-            if date_diff > 1:
+            if date_diff > self.date_buffer_days:
                 continue
 
             # Check if amount matches (YNAB stores in milliunits)
@@ -288,7 +290,7 @@ class AmazonIntegration:
             else:
                 print(f"    ✗ No matching YNAB transaction found")
                 # Debug: Show potential matches
-                print(f"      Looking for: Date={txn['date'].date()}, Amount=-${txn['amount']:.2f}, Payee contains 'Amazon'")
+                print(f"      Looking for: Date={txn['date'].date()} (±{self.date_buffer_days} days), Amount=-${txn['amount']:.2f}, Payee contains 'Amazon'")
                 # Show YNAB transactions on same date
                 same_date_txns = [t for t in ynab_transactions
                                  if datetime.strptime(str(t.date), '%Y-%m-%d').date() == txn['date'].date()]
@@ -296,6 +298,10 @@ class AmazonIntegration:
                     print(f"      Found {len(same_date_txns)} YNAB transaction(s) on {txn['date'].date()}:")
                     for t in same_date_txns[:10]:  # Show up to 10
                         print(f"        - {t.payee_name}: ${t.amount/1000:.2f}")
+
+            # Mark email as processed
+            self.email_client.label_as_processed(txn['email_id'])
+            print(f"    ✓ Marked email as processed")
 
             print()  # Empty line between transactions
 

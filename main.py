@@ -13,6 +13,7 @@ from venmo_integration import VenmoIntegration
 
 # Configuration
 DEBUG_TRANSACTION_LIMIT = 1  # Limit number of transactions to process for debugging
+DATE_BUFFER_DAYS = 5  # Number of days +/- to search for matching transactions
 
 
 def check_required_env_vars() -> bool:
@@ -116,7 +117,7 @@ def main():
         print("\n=== Fetching Transactions from Email ===\n")
 
         # Initialize integrations
-        amazon_integration = AmazonIntegration(ynab_client, email_client)
+        amazon_integration = AmazonIntegration(ynab_client, email_client, date_buffer_days=DATE_BUFFER_DAYS)
         venmo_integration = VenmoIntegration(ynab_client, email_client)
 
         # Process Amazon transactions
