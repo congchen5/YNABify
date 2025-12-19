@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 
 
 class AmazonIntegration:
-    def __init__(self, ynab_client, email_client, date_buffer_days=1):
+    def __init__(self, ynab_client, email_client, date_buffer_days=1, dry_run=False):
         """
         Initialize Amazon integration
 
@@ -17,10 +17,12 @@ class AmazonIntegration:
             ynab_client: YNABClient instance
             email_client: EmailClient instance
             date_buffer_days: Number of days +/- to search for matching transactions (default: 1)
+            dry_run: If True, don't make any modifications (default: False)
         """
         self.ynab_client = ynab_client
         self.email_client = email_client
         self.date_buffer_days = date_buffer_days
+        self.dry_run = dry_run
 
     def parse_email(self, email_dict: Dict) -> Optional[Dict]:
         """
@@ -299,10 +301,13 @@ class AmazonIntegration:
                 print(f"      Proposed Memo: {new_memo}")
 
                 # Update YNAB transaction memo (does not approve)
-                if self.ynab_client.update_transaction_memo(ynab_match.id, new_memo, ynab_match):
-                    print(f"      ✓ Updated YNAB transaction memo")
+                if self.dry_run:
+                    print(f"      [DRY RUN] Would update YNAB transaction memo")
                 else:
-                    print(f"      ✗ Failed to update YNAB transaction memo")
+                    if self.ynab_client.update_transaction_memo(ynab_match.id, new_memo, ynab_match):
+                        print(f"      ✓ Updated YNAB transaction memo")
+                    else:
+                        print(f"      ✗ Failed to update YNAB transaction memo")
 
                 matches.append({
                     'amazon': txn,
@@ -322,8 +327,11 @@ class AmazonIntegration:
                         print(f"        - {t.payee_name}: ${t.amount/1000:.2f}")
 
             # Mark email as processed
-            self.email_client.label_as_processed(txn['email_id'])
-            print(f"    ✓ Marked email as processed")
+            if self.dry_run:
+                print(f"    [DRY RUN] Would mark email as processed")
+            else:
+                self.email_client.label_as_processed(txn['email_id'])
+                print(f"    ✓ Marked email as processed")
 
             print()  # Empty line between transactions
 

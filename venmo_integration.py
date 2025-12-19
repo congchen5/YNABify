@@ -8,16 +8,18 @@ from datetime import datetime
 
 
 class VenmoIntegration:
-    def __init__(self, ynab_client, email_client):
+    def __init__(self, ynab_client, email_client, dry_run=False):
         """
         Initialize Venmo integration
 
         Args:
             ynab_client: YNABClient instance
             email_client: EmailClient instance
+            dry_run: If True, don't make any modifications (default: False)
         """
         self.ynab_client = ynab_client
         self.email_client = email_client
+        self.dry_run = dry_run
 
     def parse_email(self, email_dict: Dict) -> Optional[Dict]:
         """
@@ -124,7 +126,10 @@ class VenmoIntegration:
             print(f"  {date_str}: {amount_str} - {txn['description']}")
 
             # Mark email as processed
-            self.email_client.label_as_processed(txn['email_id'])
-            print(f"  ✓ Marked email as processed")
+            if self.dry_run:
+                print(f"  [DRY RUN] Would mark email as processed")
+            else:
+                self.email_client.label_as_processed(txn['email_id'])
+                print(f"  ✓ Marked email as processed")
 
         return transactions
