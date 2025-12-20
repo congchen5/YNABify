@@ -8,6 +8,7 @@
 
 ### Project Context
 - This is a Python project that automates YNAB transaction updates by parsing emails from vendors (Amazon, Venmo, etc.)
+- **Email Account**: When the user refers to "email", they mean congchen5.ynabify@gmail.com
 - The main entry point is `main.py`
 - Configuration is in `.env` file
 - Key modules:
