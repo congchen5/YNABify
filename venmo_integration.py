@@ -8,7 +8,7 @@ from datetime import datetime
 
 
 class VenmoIntegration:
-    def __init__(self, ynab_client, email_client, dry_run=False):
+    def __init__(self, ynab_client, email_client, dry_run=False, reprocess=False):
         """
         Initialize Venmo integration
 
@@ -16,10 +16,12 @@ class VenmoIntegration:
             ynab_client: YNABClient instance
             email_client: EmailClient instance
             dry_run: If True, don't make any modifications (default: False)
+            reprocess: If True, reprocess emails with 'processed' label (default: False)
         """
         self.ynab_client = ynab_client
         self.email_client = email_client
         self.dry_run = dry_run
+        self.reprocess = reprocess
 
     def parse_email(self, email_dict: Dict) -> Optional[Dict]:
         """
@@ -104,7 +106,8 @@ class VenmoIntegration:
         # Get unprocessed Venmo emails
         emails = self.email_client.get_unprocessed_emails(
             body_contains='venmo@venmo.com',
-            limit=limit
+            limit=limit,
+            reprocess=self.reprocess
         )
 
         transactions = []

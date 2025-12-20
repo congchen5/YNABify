@@ -61,16 +61,21 @@ class EmailClient:
         sender: Optional[str] = None,
         subject_contains: Optional[str] = None,
         body_contains: Optional[str] = None,
-        limit: int = 50
+        limit: int = 50,
+        reprocess: bool = False
     ) -> List[Dict]:
         """
-        Get emails that are NOT labeled as 'processed'
+        Get emails that don't have skip labels
+
+        By default, skips emails labeled 'matched' or 'processed'.
+        When reprocess=True, only skips 'matched' emails (allows 'processed' to be retried).
 
         Args:
             sender: Filter by sender email address
             subject_contains: Filter by subject content
             body_contains: Filter by keyword in body (for forwarded emails)
             limit: Maximum number of emails to fetch
+            reprocess: If True, reprocess emails with 'processed' label
 
         Returns:
             List of email dictionaries
@@ -81,6 +86,11 @@ class EmailClient:
 
         try:
             self.connection.select('INBOX')
+
+            # Build set of labels to skip
+            skip_labels = {'matched'}
+            if not reprocess:
+                skip_labels.add('processed')
 
             # Build search criteria
             search_criteria = []
@@ -98,20 +108,28 @@ class EmailClient:
             total_checked = 0
             for num in message_numbers[0].split():
                 total_checked += 1
-                # Check if email has 'processed' label
+                # Check if email has any skip labels
                 _, msg_data = self.connection.fetch(num, '(X-GM-LABELS RFC822)')
 
                 # Parse labels (Gmail-specific) - extract only the X-GM-LABELS part
                 labels_str = str(msg_data[0][0])  # Get the first part which contains X-GM-LABELS
+                labels_str_lower = labels_str.lower()
 
                 # Debug: print first few to see what we're getting
                 if total_checked <= 10:
                     print(f"  Debug: Email {num.decode()}, Labels: {labels_str[:200]}")
 
-                if 'processed' in labels_str.lower():
-                    if total_checked <=10:
-                        print(f"    Skipped (has 'processed' label)")
-                    continue  # Skip emails that are already processed
+                # Check if email has any of the skip labels
+                skip = False
+                for skip_label in skip_labels:
+                    if skip_label in labels_str_lower:
+                        if total_checked <= 10:
+                            print(f"    Skipped (has '{skip_label}' label)")
+                        skip = True
+                        break
+
+                if skip:
+                    continue  # Skip this email
 
                 email_body = msg_data[0][1]
                 email_message = email.message_from_bytes(email_body)
@@ -163,6 +181,14 @@ class EmailClient:
             self.connection.store(email_id, '+X-GM-LABELS', 'processed')
         except Exception as e:
             print(f"Error labeling email as processed: {e}")
+
+    def label_as_matched(self, email_id: str):
+        """Label an email as 'matched' (Gmail-specific) - indicates successful YNAB match"""
+        try:
+            # Gmail IMAP extension to add label
+            self.connection.store(email_id, '+X-GM-LABELS', 'matched')
+        except Exception as e:
+            print(f"Error labeling email as matched: {e}")
 
     def _decode_header(self, header: str) -> str:
         """Decode email header"""

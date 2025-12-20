@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 
 
 class AmazonIntegration:
-    def __init__(self, ynab_client, email_client, date_buffer_days=1, dry_run=False):
+    def __init__(self, ynab_client, email_client, date_buffer_days=1, dry_run=False, reprocess=False):
         """
         Initialize Amazon integration
 
@@ -18,11 +18,13 @@ class AmazonIntegration:
             email_client: EmailClient instance
             date_buffer_days: Number of days +/- to search for matching transactions (default: 1)
             dry_run: If True, don't make any modifications (default: False)
+            reprocess: If True, reprocess emails with 'processed' label (default: False)
         """
         self.ynab_client = ynab_client
         self.email_client = email_client
         self.date_buffer_days = date_buffer_days
         self.dry_run = dry_run
+        self.reprocess = reprocess
 
     def parse_email(self, email_dict: Dict) -> Optional[Dict]:
         """
@@ -252,7 +254,8 @@ class AmazonIntegration:
         # Get unprocessed Amazon emails
         emails = self.email_client.get_unprocessed_emails(
             subject_contains='Ordered:',  # Match forwarded Amazon order emails
-            limit=limit
+            limit=limit,
+            reprocess=self.reprocess
         )
 
         matches = []
@@ -303,18 +306,22 @@ class AmazonIntegration:
                 print(f"      Proposed Memo: {new_memo}")
 
                 # Update YNAB transaction memo (does not approve)
+                update_success = False
                 if self.dry_run:
                     print(f"      [DRY RUN] Would update YNAB transaction memo")
+                    update_success = True  # Treat dry run as success for labeling purposes
                 else:
                     if self.ynab_client.update_transaction_memo(ynab_match.id, new_memo, ynab_match):
                         print(f"      ✓ Updated YNAB transaction memo")
+                        update_success = True
                     else:
                         print(f"      ✗ Failed to update YNAB transaction memo")
 
                 matches.append({
                     'amazon': txn,
                     'ynab': ynab_match,
-                    'new_memo': new_memo
+                    'new_memo': new_memo,
+                    'update_success': update_success
                 })
             else:
                 print(f"    ✗ No matching YNAB transaction found")
@@ -328,12 +335,20 @@ class AmazonIntegration:
                     for t in same_date_txns[:10]:  # Show up to 10
                         print(f"        - {t.payee_name}: ${t.amount/1000:.2f}")
 
-            # Mark email as processed
+            # Label email appropriately
             if self.dry_run:
                 print(f"    [DRY RUN] Would mark email as processed")
+                if ynab_match:
+                    print(f"    [DRY RUN] Would mark email as matched")
             else:
+                # Always mark as processed (we checked it)
                 self.email_client.label_as_processed(txn['email_id'])
                 print(f"    ✓ Marked email as processed")
+
+                # Mark as matched only if YNAB was successfully updated
+                if ynab_match and matches and matches[-1].get('update_success'):
+                    self.email_client.label_as_matched(txn['email_id'])
+                    print(f"    ✓ Marked email as matched")
 
             print()  # Empty line between transactions
 
