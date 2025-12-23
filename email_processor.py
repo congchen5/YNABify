@@ -33,17 +33,27 @@ class EmailProcessor:
 
     def classify_email(self, email_dict: Dict) -> Optional[str]:
         """
-        Classify email by sender domain
+        Classify email by subject line or sender domain
+
+        All emails are forwarded from congchen5@gmail.com, so we primarily
+        use subject line patterns to identify the vendor.
 
         Args:
-            email_dict: Email dictionary with 'from' field
+            email_dict: Email dictionary with 'from' and 'subject' fields
 
         Returns:
             'amazon', 'venmo', or None if unrecognized
         """
         sender = email_dict.get('from', '').lower()
+        subject = email_dict.get('subject', '')
 
-        # Simple domain-based classification
+        # Check subject line patterns (for forwarded emails)
+        if 'Ordered:' in subject or 'order' in subject.lower():
+            return 'amazon'
+        elif 'paid you' in subject.lower() or 'you paid' in subject.lower() or 'charged you' in subject.lower():
+            return 'venmo'
+
+        # Fallback: domain-based classification (for direct emails)
         if '@amazon.com' in sender:
             return 'amazon'
         elif '@venmo.com' in sender:
