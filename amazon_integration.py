@@ -150,6 +150,11 @@ class AmazonIntegration:
                     item_name_from_subject = match.group(1).strip()
                     # Keep the "..." to indicate truncation
 
+            # Detect if this is a return transaction
+            is_return = 'return' in subject.lower()
+            if is_return:
+                print(f"  Detected RETURN transaction")
+
             return {
                 'source': 'amazon',
                 'order_number': order_number,
@@ -160,7 +165,8 @@ class AmazonIntegration:
                 'item_name_from_subject': item_name_from_subject,
                 'description': f"Amazon Order {order_number}" if order_number else "Amazon Purchase",
                 'email_subject': email_dict['subject'],
-                'email_id': email_dict['id']
+                'email_id': email_dict['id'],
+                'is_return': is_return
             }
 
         except Exception as e:
@@ -170,6 +176,7 @@ class AmazonIntegration:
     def match_to_ynab(self, amazon_txn: dict, ynab_transactions: list) -> Optional[dict]:
         """
         Find matching YNAB transaction for an Amazon email transaction
+        Handles both purchases (negative/outflow) and returns (positive/inflow)
 
         Args:
             amazon_txn: Amazon transaction from email
@@ -180,9 +187,14 @@ class AmazonIntegration:
         """
         amazon_date = amazon_txn['date'].date()
         amazon_amount = amazon_txn['amount']
+        is_return = amazon_txn.get('is_return', False)
 
-        # Convert to YNAB milliunits (negative for outflow)
-        amazon_amount_milliunits = int(-amazon_amount * 1000)
+        # Convert to YNAB milliunits
+        # Returns are positive (inflow), purchases are negative (outflow)
+        if is_return:
+            amazon_amount_milliunits = int(amazon_amount * 1000)  # Positive for inflow
+        else:
+            amazon_amount_milliunits = int(-amazon_amount * 1000)  # Negative for outflow
 
         for ynab_txn in ynab_transactions:
             # Parse YNAB transaction date (convert from string to date object)
@@ -207,15 +219,16 @@ class AmazonIntegration:
 
         return None
 
-    def format_memo(self, transaction: dict) -> str:
+    def _build_base_memo(self, transaction: dict) -> str:
         """
-        Format memo for Amazon transaction in YNAB
+        Build the base memo content for Amazon transaction (DRY principle)
+        This is reused by both purchases and returns.
 
         Args:
             transaction: Amazon transaction dictionary
 
         Returns:
-            Formatted memo string: "<item name>... Amazon Link: <url>" or "<item name>. Amazon Link: <url>"
+            Base memo string without return prefix
         """
         memo_parts = []
 
@@ -238,6 +251,25 @@ class AmazonIntegration:
             memo_parts.append(f"Amazon Link: {transaction['order_details_url']}")
 
         return ' '.join(memo_parts) if memo_parts else f"Order {transaction.get('order_number', '')}"
+
+    def format_memo(self, transaction: dict) -> str:
+        """
+        Format memo for Amazon transaction in YNAB
+        Adds "RETURN: " prefix for return transactions (DRY principle)
+
+        Args:
+            transaction: Amazon transaction dictionary
+
+        Returns:
+            Formatted memo string: "RETURN: <base_memo>" for returns or "<base_memo>" for purchases
+        """
+        base_memo = self._build_base_memo(transaction)
+
+        # Add RETURN prefix for return transactions
+        if transaction.get('is_return', False):
+            return f"RETURN: {base_memo}"
+
+        return base_memo
 
     def process_email_batch(self, emails: List[Dict], ynab_transactions: List) -> List[Dict]:
         """
@@ -270,11 +302,14 @@ class AmazonIntegration:
         for idx, txn in enumerate(amazon_transactions, 1):
             date_str = txn['date'].strftime('%Y-%m-%d')
             amount_str = f"${txn['amount']:.2f}" if txn['amount'] else "N/A"
+            is_return = txn.get('is_return', False)
 
-            print(f"[{idx}] Amazon Email Transaction:")
+            print(f"[{idx}] Amazon Email Transaction {'(RETURN)' if is_return else ''}:")
             print(f"    Date: {date_str}")
             print(f"    Amount: {amount_str}")
             print(f"    Order: {txn['order_number']}")
+            if is_return:
+                print(f"    Type: RETURN (expecting positive/inflow in YNAB)")
 
             # Show items if available
             if txn.get('items'):
@@ -319,7 +354,8 @@ class AmazonIntegration:
             else:
                 print(f"    ✗ No matching YNAB transaction found")
                 # Debug: Show potential matches
-                print(f"      Looking for: Date={txn['date'].date()} (±{self.date_buffer_days} days), Amount=-${txn['amount']:.2f}, Payee contains 'Amazon'")
+                amount_sign = '+' if is_return else '-'
+                print(f"      Looking for: Date={txn['date'].date()} (±{self.date_buffer_days} days), Amount={amount_sign}${txn['amount']:.2f}, Payee contains 'Amazon'")
                 # Show YNAB transactions on same date
                 same_date_txns = [t for t in ynab_transactions
                                  if datetime.strptime(str(t.date), '%Y-%m-%d').date() == txn['date'].date()]
