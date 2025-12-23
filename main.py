@@ -10,6 +10,7 @@ from ynab_client import YNABClient
 from email_client import EmailClient
 from amazon_integration import AmazonIntegration
 from venmo_integration import VenmoIntegration
+from email_processor import EmailProcessor
 
 # Configuration
 DEBUG_TRANSACTION_LIMIT = 1  # Limit number of transactions to process for debugging
@@ -124,21 +125,28 @@ def main():
 
     # Get transactions from email if available
     if email_client:
-        print("\n=== Fetching Transactions from Email ===\n")
+        print("\n=== Processing Email Transactions ===\n")
 
         # Initialize integrations
         amazon_integration = AmazonIntegration(ynab_client, email_client, date_buffer_days=DATE_BUFFER_DAYS, dry_run=DRY_RUN, reprocess=REPROCESS)
         venmo_integration = VenmoIntegration(ynab_client, email_client, dry_run=DRY_RUN, reprocess=REPROCESS)
 
-        # Process Amazon transactions
-        amazon_matches = amazon_integration.process_emails(
+        # Initialize email processor with integrations
+        email_processor = EmailProcessor(
+            email_client=email_client,
+            amazon_integration=amazon_integration,
+            venmo_integration=venmo_integration,
             limit=DEBUG_TRANSACTION_LIMIT,
-            ynab_transactions=ynab_transactions
+            reprocess=REPROCESS
         )
 
+        # Process all emails once (central processing loop)
+        results = email_processor.process_emails(ynab_transactions=ynab_transactions)
+
         # Summary for Amazon
+        amazon_matches = results.get('amazon', [])
         if amazon_matches:
-            print(f"\n=== Summary ===")
+            print(f"\n=== Amazon Summary ===")
             print(f"Found {len(amazon_matches)} Amazon matches")
             print(f"\nTo update these transactions, the bot would:")
             print(f"  1. Update the memo with item details + order link")
@@ -147,8 +155,11 @@ def main():
         elif amazon_matches is not None:
             print("\n✗ No matches found between Amazon emails and YNAB transactions")
 
-        # Process Venmo transactions
-        venmo_transactions = venmo_integration.process_emails(limit=DEBUG_TRANSACTION_LIMIT)
+        # Summary for Venmo
+        venmo_transactions = results.get('venmo', [])
+        if venmo_transactions:
+            print(f"\n=== Venmo Summary ===")
+            print(f"Found {len(venmo_transactions)} Venmo transactions")
 
         email_client.disconnect()
 

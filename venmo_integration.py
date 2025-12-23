@@ -26,6 +26,7 @@ class VenmoIntegration:
     def parse_email(self, email_dict: Dict) -> Optional[Dict]:
         """
         Parse Venmo transaction notification email
+        Handles both sent and received payments.
 
         Args:
             email_dict: Email dictionary from EmailClient.get_unprocessed_emails
@@ -91,25 +92,17 @@ class VenmoIntegration:
             print(f"Error parsing Venmo email: {e}")
             return None
 
-    def process_emails(self, limit: int) -> List[Dict]:
+    def process_email_batch(self, emails: List[Dict]) -> List[Dict]:
         """
-        Process Venmo emails: fetch, parse, and prepare for YNAB creation
+        Process a batch of pre-fetched Venmo emails: parse and prepare for YNAB creation
+        This is the NEW method used by EmailProcessor.
 
         Args:
-            limit: Maximum number of emails to process
+            emails: List of email dictionaries (pre-fetched and classified as Venmo)
 
         Returns:
             List of parsed Venmo transactions
         """
-        print("\nFetching Venmo transactions...")
-
-        # Get unprocessed Venmo emails
-        emails = self.email_client.get_unprocessed_emails(
-            body_contains='venmo@venmo.com',
-            limit=limit,
-            reprocess=self.reprocess
-        )
-
         transactions = []
 
         # Parse each email

@@ -29,6 +29,7 @@ class AmazonIntegration:
     def parse_email(self, email_dict: Dict) -> Optional[Dict]:
         """
         Parse Amazon order confirmation email (including forwarded emails)
+        Handles both purchases and refunds internally.
 
         Args:
             email_dict: Email dictionary from EmailClient.get_unprocessed_emails
@@ -238,26 +239,18 @@ class AmazonIntegration:
 
         return ' '.join(memo_parts) if memo_parts else f"Order {transaction.get('order_number', '')}"
 
-    def process_emails(self, limit: int, ynab_transactions: List) -> List[Dict]:
+    def process_email_batch(self, emails: List[Dict], ynab_transactions: List) -> List[Dict]:
         """
-        Process Amazon emails: fetch, parse, and match to YNAB
+        Process a batch of pre-fetched Amazon emails: parse and match to YNAB
+        This is the NEW method used by EmailProcessor.
 
         Args:
-            limit: Maximum number of emails to process
+            emails: List of email dictionaries (pre-fetched and classified as Amazon)
             ynab_transactions: List of YNAB transactions to match against
 
         Returns:
             List of matches (dict with 'amazon', 'ynab', 'new_memo' keys)
         """
-        print("Fetching Amazon transactions...")
-
-        # Get unprocessed Amazon emails
-        emails = self.email_client.get_unprocessed_emails(
-            subject_contains='Ordered:',  # Match forwarded Amazon order emails
-            limit=limit,
-            reprocess=self.reprocess
-        )
-
         matches = []
         amazon_transactions = []
 
