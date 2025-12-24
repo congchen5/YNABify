@@ -149,14 +149,18 @@ def main():
         venmo_transactions = results.get('venmo', [])
 
         # Count matched vs unmatched for Amazon
-        amazon_matched = sum(1 for match in amazon_matches if match.get('ynab') is not None)
-        amazon_unmatched = len(amazon_matches) - amazon_matched
+        # Note: amazon_matches only contains emails that matched to YNAB
+        amazon_matched = len(amazon_matches)
+        amazon_total = stats.get('amazon_emails', 0)
+        amazon_unmatched = amazon_total - amazon_matched
 
         email_client.disconnect()
 
         # Print comprehensive summary
         print("\n" + "=" * 80)
         print("=== RUN SUMMARY ===")
+        if DRY_RUN:
+            print("=== ⚠️  DRY RUN MODE - No modifications were made ===")
         print("=" * 80)
 
         print(f"\n📧 Email Processing:")
@@ -166,15 +170,24 @@ def main():
         print(f"    - Unrecognized: {stats.get('unrecognized_emails', 0)}")
 
         print(f"\n🔗 YNAB Matching (Amazon):")
-        print(f"  Matched & Updated: {amazon_matched}")
+        if DRY_RUN:
+            print(f"  Would Match & Update: {amazon_matched}")
+        else:
+            print(f"  Matched & Updated: {amazon_matched}")
         print(f"  Unmatched: {amazon_unmatched}")
-        print(f"  Total Amazon: {len(amazon_matches)}")
+        print(f"  Total Amazon: {amazon_total}")
 
         print(f"\n💸 Venmo Transactions:")
-        print(f"  Processed: {len(venmo_transactions)}")
+        if DRY_RUN:
+            print(f"  Would Process: {len(venmo_transactions)}")
+        else:
+            print(f"  Processed: {len(venmo_transactions)}")
 
         if amazon_matched > 0:
-            print(f"\n✓ Successfully updated {amazon_matched} YNAB transaction(s) with Amazon details")
+            if DRY_RUN:
+                print(f"\n⚠️  Would update {amazon_matched} YNAB transaction(s) with Amazon details (DRY RUN)")
+            else:
+                print(f"\n✓ Successfully updated {amazon_matched} YNAB transaction(s) with Amazon details")
 
         print("\n" + "=" * 80)
 
