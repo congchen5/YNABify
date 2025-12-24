@@ -82,7 +82,10 @@ class VenmoIntegration:
             try:
                 date_str = email_dict['date']
                 # Parse format: "Sat, 6 Dec 2025 04:23:26 +0000"
-                transaction_date = datetime.strptime(date_str.split(',')[1].strip()[:20], '%d %b %Y %H:%M:%S')
+                # Remove day name and timezone
+                date_part = date_str.split(',')[1].strip()  # " 6 Dec 2025 04:23:26 +0000"
+                date_without_tz = date_part.rsplit(' ', 1)[0]  # Remove timezone: "6 Dec 2025 04:23:26"
+                transaction_date = datetime.strptime(date_without_tz, '%d %b %Y %H:%M:%S')
             except Exception as e:
                 print(f"  Warning: Could not parse date '{email_dict.get('date')}', using today: {e}")
                 transaction_date = datetime.now()

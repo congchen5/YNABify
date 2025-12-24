@@ -95,7 +95,7 @@ class YNABClient:
                 category_id=category_id
             )
 
-            self.transactions_api.create_transactions(
+            result = self.transactions_api.create_transactions(
                 self.budget_id,
                 [transaction]
             )
@@ -103,6 +103,8 @@ class YNABClient:
             return True
         except Exception as e:
             print(f"Error creating transaction: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def update_transaction_category(
