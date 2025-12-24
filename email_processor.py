@@ -133,6 +133,6 @@ class EmailProcessor:
         # Process Venmo emails
         if venmo_emails and self.venmo_integration:
             print(f"\n=== Processing {len(venmo_emails)} Venmo Email(s) ===\n")
-            results['venmo'] = self.venmo_integration.process_email_batch(venmo_emails)
+            results['venmo'] = self.venmo_integration.process_email_batch(venmo_emails, ynab_transactions)
 
         return results

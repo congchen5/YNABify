@@ -179,15 +179,21 @@ def main():
 
         print(f"\n💸 Venmo Transactions:")
         if DRY_RUN:
-            print(f"  Would Process: {len(venmo_transactions)}")
+            print(f"  Would Create: {len(venmo_transactions)}")
         else:
-            print(f"  Processed: {len(venmo_transactions)}")
+            print(f"  Created: {len(venmo_transactions)}")
 
         if amazon_matched > 0:
             if DRY_RUN:
                 print(f"\n⚠️  Would update {amazon_matched} YNAB transaction(s) with Amazon details (DRY RUN)")
             else:
                 print(f"\n✓ Successfully updated {amazon_matched} YNAB transaction(s) with Amazon details")
+
+        if len(venmo_transactions) > 0:
+            if DRY_RUN:
+                print(f"⚠️  Would create {len(venmo_transactions)} YNAB transaction(s) from Venmo (DRY RUN)")
+            else:
+                print(f"✓ Successfully created {len(venmo_transactions)} YNAB transaction(s) from Venmo")
 
         print("\n" + "=" * 80)
 

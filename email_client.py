@@ -190,6 +190,14 @@ class EmailClient:
         except Exception as e:
             print(f"Error labeling email as matched: {e}")
 
+    def label_as_created(self, email_id: str):
+        """Label an email as 'created' (Gmail-specific) - indicates successful YNAB transaction creation"""
+        try:
+            # Gmail IMAP extension to add label
+            self.connection.store(email_id, '+X-GM-LABELS', 'created')
+        except Exception as e:
+            print(f"Error labeling email as created: {e}")
+
     def _decode_header(self, header: str) -> str:
         """Decode email header"""
         if header is None:

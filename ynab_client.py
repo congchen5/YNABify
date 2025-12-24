@@ -95,9 +95,9 @@ class YNABClient:
                 category_id=category_id
             )
 
-            self.transactions_api.create_transaction(
+            self.transactions_api.create_transactions(
                 self.budget_id,
-                transaction
+                [transaction]
             )
             print(f"Created transaction: {payee_name} - ${amount/1000:.2f}")
             return True
