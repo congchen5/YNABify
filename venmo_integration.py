@@ -9,20 +9,18 @@ from bs4 import BeautifulSoup
 
 
 class VenmoIntegration:
-    def __init__(self, ynab_client, email_client, date_buffer_days=5, dry_run=False, reprocess=False):
+    def __init__(self, ynab_client, email_client, dry_run=False, reprocess=False):
         """
         Initialize Venmo integration
 
         Args:
             ynab_client: YNABClient instance
             email_client: EmailClient instance
-            date_buffer_days: Number of days +/- to check for duplicates (default: 5)
             dry_run: If True, don't make any modifications (default: False)
             reprocess: If True, reprocess emails with 'processed' label (default: False)
         """
         self.ynab_client = ynab_client
         self.email_client = email_client
-        self.date_buffer_days = date_buffer_days
         self.dry_run = dry_run
         self.reprocess = reprocess
         self.venmo_account_id = None  # Will be set when we fetch accounts
@@ -201,7 +199,7 @@ class VenmoIntegration:
     def _check_duplicate(self, venmo_txn: Dict, ynab_transactions: List) -> bool:
         """
         Check if a Venmo transaction already exists in YNAB
-        Uses DATE_BUFFER_DAYS to check within ±N days of the transaction date
+        Checks within ±1 day of the transaction date
 
         Args:
             venmo_txn: Parsed Venmo transaction
@@ -221,9 +219,9 @@ class VenmoIntegration:
         else:
             venmo_amount_milliunits = int(-venmo_amount * 1000)  # Negative for outflow
 
-        # Define date range
-        date_min = venmo_date - timedelta(days=self.date_buffer_days)
-        date_max = venmo_date + timedelta(days=self.date_buffer_days)
+        # Define date range (±1 day)
+        date_min = venmo_date - timedelta(days=1)
+        date_max = venmo_date + timedelta(days=1)
 
         # Check for duplicates in YNAB
         for ynab_txn in ynab_transactions:
