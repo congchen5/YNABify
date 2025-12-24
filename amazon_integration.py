@@ -400,7 +400,8 @@ class AmazonIntegration:
                 print(f"    ✗ No matching YNAB transaction found")
                 # Debug: Show potential matches
                 amount_sign = '+' if is_return else '-'
-                print(f"      Looking for: Date={txn['date'].date()} (±{self.date_buffer_days} days), Amount={amount_sign}${txn['amount']:.2f}, Payee contains 'Amazon'")
+                amount_display = f"{amount_sign}${txn['amount']:.2f}" if txn['amount'] is not None else "N/A"
+                print(f"      Looking for: Date={txn['date'].date()} (±{self.date_buffer_days} days), Amount={amount_display}, Payee contains 'Amazon'")
                 # Show YNAB transactions on same date
                 same_date_txns = [t for t in ynab_transactions
                                  if datetime.strptime(str(t.date), '%Y-%m-%d').date() == txn['date'].date()]
