@@ -143,25 +143,40 @@ def main():
         # Process all emails once (central processing loop)
         results = email_processor.process_emails(ynab_transactions=ynab_transactions)
 
-        # Summary for Amazon
+        # Get stats
+        stats = results.get('stats', {})
         amazon_matches = results.get('amazon', [])
-        if amazon_matches:
-            print(f"\n=== Amazon Summary ===")
-            print(f"Found {len(amazon_matches)} Amazon matches")
-            print(f"\nTo update these transactions, the bot would:")
-            print(f"  1. Update the memo with item details + order link")
-            print(f"  2. Keep the transaction UNAPPROVED (you review in YNAB)")
-            print(f"  3. Mark the email as read")
-        elif amazon_matches is not None:
-            print("\n✗ No matches found between Amazon emails and YNAB transactions")
-
-        # Summary for Venmo
         venmo_transactions = results.get('venmo', [])
-        if venmo_transactions:
-            print(f"\n=== Venmo Summary ===")
-            print(f"Found {len(venmo_transactions)} Venmo transactions")
+
+        # Count matched vs unmatched for Amazon
+        amazon_matched = sum(1 for match in amazon_matches if match.get('ynab') is not None)
+        amazon_unmatched = len(amazon_matches) - amazon_matched
 
         email_client.disconnect()
+
+        # Print comprehensive summary
+        print("\n" + "=" * 80)
+        print("=== RUN SUMMARY ===")
+        print("=" * 80)
+
+        print(f"\n📧 Email Processing:")
+        print(f"  Total emails processed: {stats.get('total_emails', 0)}")
+        print(f"    - Amazon emails: {stats.get('amazon_emails', 0)}")
+        print(f"    - Venmo emails: {stats.get('venmo_emails', 0)}")
+        print(f"    - Unrecognized: {stats.get('unrecognized_emails', 0)}")
+
+        print(f"\n🔗 YNAB Matching (Amazon):")
+        print(f"  Matched & Updated: {amazon_matched}")
+        print(f"  Unmatched: {amazon_unmatched}")
+        print(f"  Total Amazon: {len(amazon_matches)}")
+
+        print(f"\n💸 Venmo Transactions:")
+        print(f"  Processed: {len(venmo_transactions)}")
+
+        if amazon_matched > 0:
+            print(f"\n✓ Successfully updated {amazon_matched} YNAB transaction(s) with Amazon details")
+
+        print("\n" + "=" * 80)
 
     print("\n✓ YNABify completed successfully!")
 

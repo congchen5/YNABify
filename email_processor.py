@@ -113,7 +113,13 @@ class EmailProcessor:
         # Process by vendor
         results = {
             'amazon': [],
-            'venmo': []
+            'venmo': [],
+            'stats': {
+                'total_emails': len(emails),
+                'amazon_emails': len(amazon_emails),
+                'venmo_emails': len(venmo_emails),
+                'unrecognized_emails': len(unrecognized_emails)
+            }
         }
 
         # Process Amazon emails
