@@ -3,6 +3,7 @@ Amazon Integration - Parse Amazon emails and match to YNAB transactions
 """
 
 import re
+import html
 from typing import Dict, List, Optional
 from datetime import datetime
 from bs4 import BeautifulSoup
@@ -25,6 +26,41 @@ class AmazonIntegration:
         self.date_buffer_days = date_buffer_days
         self.dry_run = dry_run
         self.reprocess = reprocess
+
+    def _extract_return_item_name(self, subject: str) -> Optional[str]:
+        """
+        Extract item name from return email subject
+
+        Patterns:
+        - "Fwd: Return request confirmed for <ITEM_NAME>..."
+        - "Fwd: Your return drop off confirmation for <ITEM_NAME>...."
+
+        Args:
+            subject: Email subject line
+
+        Returns:
+            Extracted item name with HTML entities decoded, or None
+        """
+        # Strip forwarding prefix
+        clean_subject = re.sub(r'^Fwd:\s*', '', subject, flags=re.IGNORECASE)
+
+        # Try pattern 1: "Return request confirmed for ..."
+        match = re.search(r'return request confirmed for\s+(.+)', clean_subject, re.IGNORECASE)
+        if match:
+            item_name = match.group(1).strip()
+            # Decode HTML entities (&amp, &quot, etc.)
+            item_name = html.unescape(item_name)
+            return item_name
+
+        # Try pattern 2: "Your return drop off confirmation for ..."
+        match = re.search(r'return drop off confirmation for\s+(.+)', clean_subject, re.IGNORECASE)
+        if match:
+            item_name = match.group(1).strip()
+            # Decode HTML entities (&amp, &quot, etc.)
+            item_name = html.unescape(item_name)
+            return item_name
+
+        return None
 
     def parse_email(self, email_dict: Dict) -> Optional[Dict]:
         """
@@ -140,20 +176,25 @@ class AmazonIntegration:
             if not order_number and not amount:
                 return None
 
-            # Extract item name from subject line (format: Fwd: Ordered: "Item Name...")
-            item_name_from_subject = None
+            # Extract item name from subject line
             subject = email_dict['subject']
-            if 'Ordered:' in subject:
-                # Extract text between "Ordered: "" and closing quote or "..."
+
+            # Detect if this is a return transaction
+            is_return = 'return' in subject.lower()
+
+            item_name_from_subject = None
+            if is_return:
+                # For return emails: extract from return-specific patterns
+                print(f"  Detected RETURN transaction")
+                item_name_from_subject = self._extract_return_item_name(subject)
+                if item_name_from_subject:
+                    print(f"  Extracted return item: {item_name_from_subject}")
+            elif 'Ordered:' in subject:
+                # For purchase emails: extract from "Ordered:" pattern
                 match = re.search(r'Ordered:\s*["\']([^"\']+)', subject)
                 if match:
                     item_name_from_subject = match.group(1).strip()
                     # Keep the "..." to indicate truncation
-
-            # Detect if this is a return transaction
-            is_return = 'return' in subject.lower()
-            if is_return:
-                print(f"  Detected RETURN transaction")
 
             return {
                 'source': 'amazon',
@@ -188,6 +229,10 @@ class AmazonIntegration:
         amazon_date = amazon_txn['date'].date()
         amazon_amount = amazon_txn['amount']
         is_return = amazon_txn.get('is_return', False)
+
+        # Cannot match if amount is None
+        if amazon_amount is None:
+            return None
 
         # Convert to YNAB milliunits
         # Returns are positive (inflow), purchases are negative (outflow)
