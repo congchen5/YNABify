@@ -160,7 +160,11 @@ class AmazonIntegration:
             if not order_date:
                 try:
                     date_str = email_dict['date']
-                    order_date = datetime.strptime(date_str.split(',')[1].strip()[:20], '%d %b %Y %H:%M:%S')
+                    # Parse format: "Tue, 9 Dec 2025 06:50:15 +0000"
+                    # Remove day name and timezone
+                    date_part = date_str.split(',')[1].strip()  # "9 Dec 2025 06:50:15 +0000"
+                    date_without_tz = date_part.rsplit(' ', 1)[0]  # Remove timezone: "9 Dec 2025 06:50:15"
+                    order_date = datetime.strptime(date_without_tz, '%d %b %Y %H:%M:%S')
                 except:
                     order_date = datetime.now()
 
@@ -191,7 +195,8 @@ class AmazonIntegration:
                     print(f"  Extracted return item: {item_name_from_subject}")
             elif 'Ordered:' in subject:
                 # For purchase emails: extract from "Ordered:" pattern
-                match = re.search(r'Ordered:\s*["\']([^"\']+)', subject)
+                # Handle formats like: "Ordered: Item..." or "Ordered: 2 'Item...'"
+                match = re.search(r'Ordered:.*?["\']([^"\']+)', subject)
                 if match:
                     item_name_from_subject = match.group(1).strip()
                     # Keep the "..." to indicate truncation
