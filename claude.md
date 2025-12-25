@@ -23,8 +23,8 @@
 - Configuration flags in `main.py`:
   - `DEBUG_TRANSACTION_LIMIT`: Number of emails to process (for testing)
   - `DATE_BUFFER_DAYS`: Days +/- to match transactions
+  - `EMAIL_DAYS_BACK`: Only process emails from last N days (default: 60)
   - `DRY_RUN`: When True, no modifications are made (no email labels, no YNAB updates)
-  - `REPROCESS`: When True, reprocess emails with 'processed' label (still skips 'matched')
 
 ---
 
@@ -58,24 +58,30 @@ main.py
 - `email_client.py`: Gmail IMAP connection, email fetching, labeling
 - `ynab_client.py`: YNAB API wrapper (accounts, transactions, categories, updates)
 
-### Two-Label Email System
+### Success-Only Label System with Automatic Retry
 
-The project uses a two-label approach for email processing:
+The project uses a simple, success-based label system with automatic retry:
 
-1. **`processed` label**: Applied to ALL emails that have been successfully parsed
-   - Amazon emails: Applied after successful parsing (regardless of YNAB match)
-   - Venmo emails: Applied after successful parsing and YNAB transaction creation
-   - Purpose: Prevents re-parsing emails that have already been processed
+**Labels:**
+1. **`matched`** (Amazon only): Applied after successfully updating YNAB transaction
+   - Indicates email was matched to YNAB transaction and memo was updated
+   - Once labeled, email is permanently skipped
 
-2. **`matched` label**: Applied ONLY to Amazon emails that matched a YNAB transaction
-   - Only used for Amazon integration (Venmo doesn't need matching)
-   - Applied after successful YNAB transaction update
-   - Purpose: Distinguishes between parsed-but-not-matched vs successfully-matched Amazon emails
+2. **`created`** (Venmo only): Applied after successfully creating YNAB transaction
+   - Indicates YNAB transaction was created for this Venmo payment
+   - Once labeled, email is permanently skipped
 
-**Label Behavior:**
-- Normal mode: Skip emails with either `processed` OR `matched` labels
-- Reprocess mode (`REPROCESS=True`): Skip only `matched` emails, reprocess `processed` emails
-- This allows re-running on previously parsed emails without duplicating successful matches
+**Automatic Retry Behavior:**
+- Emails without success labels are retried on every run
+- Date filtering (EMAIL_DAYS_BACK=60) prevents scanning old emails
+- Solves timing issue where Amazon emails arrive before YNAB syncs transactions
+- No manual reprocessing needed - system automatically retries until success
+
+**Why This Works:**
+- Amazon emails keep retrying until YNAB transaction appears and gets matched
+- Venmo emails keep retrying if creation fails (network issues, etc.)
+- Once successful, emails are skipped forever via success labels
+- Old emails (>60 days) are automatically ignored
 
 ### Amazon Integration Details
 
@@ -94,13 +100,14 @@ The project uses a two-label approach for email processing:
   - Payee contains "Amazon" or category is Amazon
   - Amount matches order total (considers negative sign)
   - Date within buffer range
-  - Not already processed (no 'matched' label)
+  - Not already matched (no 'matched' label)
 
 **Memo Updates:**
 - Updates YNAB transaction memo with item details
 - Format: `[Item] x [Qty] ($[Price]): [Link] | ...`
 - Preserves existing `...` truncation indicator if memo was already truncated
-- Applies both `processed` and `matched` labels after successful update
+- Applies `matched` label only after successful update
+- Emails without label automatically retry on next run until matched
 
 ### Venmo Integration Details
 
@@ -111,7 +118,9 @@ The project uses a two-label approach for email processing:
 **YNAB Transaction Creation:**
 - Creates new transactions in default Venmo account
 - Transaction details populated from email data
-- Only applied `processed` label (no matching needed)
+- Applies `created` label only after successful creation
+- Emails without label automatically retry on next run until created
+- Duplicate detection prevents creating same transaction twice
 
 ### Configuration Options
 
@@ -126,8 +135,8 @@ The project uses a two-label approach for email processing:
 **Main.py Flags:**
 - `DEBUG_TRANSACTION_LIMIT`: Max emails to process (default: 1000)
 - `DATE_BUFFER_DAYS`: Date matching tolerance (default: 5 days)
+- `EMAIL_DAYS_BACK`: Only process emails from last N days (default: 60)
 - `DRY_RUN`: Run without modifications (default: False)
-- `REPROCESS`: Reprocess 'processed' emails, skip 'matched' (default: False)
 
 ### Technical Patterns & Best Practices
 
@@ -185,12 +194,6 @@ python main.py
 python main.py
 ```
 
-**Reprocessing emails:**
-```bash
-# Set REPROCESS = True in main.py
-python main.py
-```
-
 **Analyzing email labels:**
 ```bash
 python scripts/list_labels.py
@@ -201,12 +204,18 @@ python scripts/list_labels.py
 python scripts/analyze_return_emails.py
 ```
 
+**Note on reprocessing:**
+- No manual reprocessing needed - emails automatically retry until successful
+- System only processes emails from last 60 days (configurable via EMAIL_DAYS_BACK)
+
 ### Recent Major Work
 
-1. **Two-Label System Implementation**:
-   - Added `processed` label for all parsed emails
-   - `matched` label specifically for Amazon-YNAB matches
-   - Enables reprocessing without duplicate matches
+1. **Success-Only Label System with Automatic Retry**:
+   - Removed `processed` label entirely
+   - Only use success labels: `matched` (Amazon) and `created` (Venmo)
+   - Added date-based filtering (EMAIL_DAYS_BACK=60)
+   - Automatic retry until success - solves timing issues
+   - No manual reprocessing needed
 
 2. **Memo Truncation Preservation**:
    - Preserves `...` indicator when updating memos
@@ -228,9 +237,10 @@ python scripts/analyze_return_emails.py
 ### Known Patterns & Gotchas
 
 **Email Labeling:**
-- Always check for existing labels before applying
-- Use two-label system consistently (processed + matched for Amazon)
+- Only apply success labels: `matched` (Amazon) or `created` (Venmo)
+- Never label emails that haven't completed successfully
 - Label operations must be in email_client.py, not integrations
+- Emails without labels will automatically retry on next run
 
 **Date Matching:**
 - YNAB dates are in YYYY-MM-DD format
