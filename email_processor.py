@@ -13,7 +13,7 @@ class EmailProcessor:
         amazon_integration=None,
         venmo_integration=None,
         limit: int = 50,
-        reprocess: bool = False
+        days_back: int = 60
     ):
         """
         Initialize email processor
@@ -23,13 +23,13 @@ class EmailProcessor:
             amazon_integration: AmazonIntegration instance (optional)
             venmo_integration: VenmoIntegration instance (optional)
             limit: Maximum number of emails to process
-            reprocess: If True, reprocess emails with 'processed' label
+            days_back: Only process emails from last N days (default: 60)
         """
         self.email_client = email_client
         self.amazon_integration = amazon_integration
         self.venmo_integration = venmo_integration
         self.limit = limit
-        self.reprocess = reprocess
+        self.days_back = days_back
 
     def classify_email(self, email_dict: Dict) -> Optional[str]:
         """
@@ -76,7 +76,7 @@ class EmailProcessor:
         # Fetch ALL unprocessed emails (no vendor-specific filters)
         emails = self.email_client.get_unprocessed_emails(
             limit=self.limit,
-            reprocess=self.reprocess
+            days_back=self.days_back
         )
 
         if not emails:

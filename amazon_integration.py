@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 
 
 class AmazonIntegration:
-    def __init__(self, ynab_client, email_client, date_buffer_days=1, dry_run=False, reprocess=False):
+    def __init__(self, ynab_client, email_client, date_buffer_days=1, dry_run=False):
         """
         Initialize Amazon integration
 
@@ -19,13 +19,11 @@ class AmazonIntegration:
             email_client: EmailClient instance
             date_buffer_days: Number of days +/- to search for matching transactions (default: 1)
             dry_run: If True, don't make any modifications (default: False)
-            reprocess: If True, reprocess emails with 'processed' label (default: False)
         """
         self.ynab_client = ynab_client
         self.email_client = email_client
         self.date_buffer_days = date_buffer_days
         self.dry_run = dry_run
-        self.reprocess = reprocess
 
     def _extract_return_item_name(self, subject: str) -> Optional[str]:
         """
@@ -506,20 +504,15 @@ class AmazonIntegration:
                     for t in same_date_txns[:10]:  # Show up to 10
                         print(f"        - {t.payee_name}: ${t.amount/1000:.2f}")
 
-            # Label email appropriately
+            # Label email only if successfully matched and updated
             if self.dry_run:
-                print(f"    [DRY RUN] Would mark email as processed")
                 if ynab_match:
                     print(f"    [DRY RUN] Would mark email as matched")
             else:
-                # Always mark as processed (we checked it)
-                self.email_client.label_as_processed(txn['email_id'])
-                print(f"    ✓ Marked email as processed")
-
                 # Mark as matched only if YNAB was successfully updated
                 if ynab_match and matches and matches[-1].get('update_success'):
                     self.email_client.label_as_matched(txn['email_id'])
-                    print(f"    ✓ Marked email as matched")
+                    print(f"    ✓ Marked email as matched (will retry until matched)")
 
             print()  # Empty line between transactions
 

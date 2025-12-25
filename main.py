@@ -15,8 +15,8 @@ from email_processor import EmailProcessor
 # Configuration
 DEBUG_TRANSACTION_LIMIT = 1000  # Limit number of transactions to process for debugging
 DATE_BUFFER_DAYS = 5  # Number of days +/- to search for matching transactions
+EMAIL_DAYS_BACK = 60  # Only process emails from the last N days
 DRY_RUN = False  # When True, run without making any modifications (no email labels, no YNAB updates)
-REPROCESS = False  # When True, reprocess emails labeled 'processed' (but still skip 'matched')
 
 
 def check_required_env_vars() -> bool:
@@ -72,10 +72,6 @@ def main():
         print("⚠️  DRY RUN MODE - No modifications will be made")
         print("=" * 40)
 
-    if REPROCESS:
-        print("⚠️  REPROCESS MODE - Will reprocess 'processed' emails")
-        print("=" * 40)
-
     # Check required environment variables
     if not check_required_env_vars():
         return
@@ -126,10 +122,11 @@ def main():
     # Get transactions from email if available
     if email_client:
         print("\n=== Processing Email Transactions ===\n")
+        print(f"Processing emails from the last {EMAIL_DAYS_BACK} days")
 
         # Initialize integrations
-        amazon_integration = AmazonIntegration(ynab_client, email_client, date_buffer_days=DATE_BUFFER_DAYS, dry_run=DRY_RUN, reprocess=REPROCESS)
-        venmo_integration = VenmoIntegration(ynab_client, email_client, dry_run=DRY_RUN, reprocess=REPROCESS)
+        amazon_integration = AmazonIntegration(ynab_client, email_client, date_buffer_days=DATE_BUFFER_DAYS, dry_run=DRY_RUN)
+        venmo_integration = VenmoIntegration(ynab_client, email_client, dry_run=DRY_RUN)
 
         # Initialize email processor with integrations
         email_processor = EmailProcessor(
@@ -137,7 +134,7 @@ def main():
             amazon_integration=amazon_integration,
             venmo_integration=venmo_integration,
             limit=DEBUG_TRANSACTION_LIMIT,
-            reprocess=REPROCESS
+            days_back=EMAIL_DAYS_BACK
         )
 
         # Process all emails once (central processing loop)

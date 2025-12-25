@@ -62,20 +62,20 @@ class EmailClient:
         subject_contains: Optional[str] = None,
         body_contains: Optional[str] = None,
         limit: int = 50,
-        reprocess: bool = False
+        days_back: int = 60
     ) -> List[Dict]:
         """
-        Get emails that don't have skip labels
+        Get emails that don't have success labels (matched/created)
 
-        By default, skips emails labeled 'matched' or 'processed'.
-        When reprocess=True, only skips 'matched' emails (allows 'processed' to be retried).
+        Skips emails labeled 'matched' (Amazon) or 'created' (Venmo).
+        Only fetches emails from the last N days to avoid reprocessing old emails.
 
         Args:
             sender: Filter by sender email address
             subject_contains: Filter by subject content
             body_contains: Filter by keyword in body (for forwarded emails)
             limit: Maximum number of emails to fetch
-            reprocess: If True, reprocess emails with 'processed' label
+            days_back: Only fetch emails from last N days (default: 60)
 
         Returns:
             List of email dictionaries
@@ -87,13 +87,18 @@ class EmailClient:
         try:
             self.connection.select('INBOX')
 
-            # Build set of labels to skip
-            skip_labels = {'matched'}
-            if not reprocess:
-                skip_labels.add('processed')
+            # Only skip emails with success labels (matched for Amazon, created for Venmo)
+            skip_labels = {'matched', 'created'}
 
             # Build search criteria
             search_criteria = []
+
+            # Add date filter (IMAP SINCE format: DD-Mon-YYYY)
+            from datetime import datetime, timedelta
+            cutoff_date = datetime.now() - timedelta(days=days_back)
+            date_str = cutoff_date.strftime('%d-%b-%Y')
+            search_criteria.append(f'SINCE {date_str}')
+
             if sender:
                 search_criteria.append(f'FROM "{sender}"')
             if subject_contains:
@@ -101,7 +106,7 @@ class EmailClient:
             # Note: IMAP TEXT search is not reliable, so we'll filter body content after fetching
 
             # Get all matching emails first
-            search_string = ' '.join(search_criteria) if search_criteria else 'ALL'
+            search_string = ' '.join(search_criteria)
             _, message_numbers = self.connection.search(None, search_string)
 
             emails = []
@@ -173,14 +178,6 @@ class EmailClient:
             self.connection.store(email_id, '+FLAGS', '\\Seen')
         except Exception as e:
             print(f"Error marking email as read: {e}")
-
-    def label_as_processed(self, email_id: str):
-        """Label an email as 'processed' (Gmail-specific)"""
-        try:
-            # Gmail IMAP extension to add label
-            self.connection.store(email_id, '+X-GM-LABELS', 'processed')
-        except Exception as e:
-            print(f"Error labeling email as processed: {e}")
 
     def label_as_matched(self, email_id: str):
         """Label an email as 'matched' (Gmail-specific) - indicates successful YNAB match"""

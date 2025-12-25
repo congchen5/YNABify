@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 
 
 class VenmoIntegration:
-    def __init__(self, ynab_client, email_client, dry_run=False, reprocess=False):
+    def __init__(self, ynab_client, email_client, dry_run=False):
         """
         Initialize Venmo integration
 
@@ -17,12 +17,10 @@ class VenmoIntegration:
             ynab_client: YNABClient instance
             email_client: EmailClient instance
             dry_run: If True, don't make any modifications (default: False)
-            reprocess: If True, reprocess emails with 'processed' label (default: False)
         """
         self.ynab_client = ynab_client
         self.email_client = email_client
         self.dry_run = dry_run
-        self.reprocess = reprocess
         self.venmo_account_id = None  # Will be set when we fetch accounts
 
     def parse_email(self, email_dict: Dict) -> Optional[Dict]:
@@ -174,28 +172,27 @@ class VenmoIntegration:
             duplicate = self._check_duplicate(txn, ynab_transactions)
             if duplicate:
                 print(f"    ⚠ Duplicate found in YNAB (skipping)")
-                # Still mark as processed
+                # Mark as created if duplicate (prevents retry)
                 if self.dry_run:
-                    print(f"    [DRY RUN] Would mark email as processed")
+                    print(f"    [DRY RUN] Would mark email as created")
                 else:
-                    self.email_client.label_as_processed(txn['email_id'])
-                    print(f"    ✓ Marked email as processed")
+                    self.email_client.label_as_created(txn['email_id'])
+                    print(f"    ✓ Marked email as created")
                 continue
 
             # Create YNAB transaction
             if self.dry_run:
                 print(f"    [DRY RUN] Would create YNAB transaction")
-                print(f"    [DRY RUN] Would mark email as processed + created")
+                print(f"    [DRY RUN] Would mark email as created")
             else:
                 success = self._create_ynab_transaction(txn)
                 if success:
                     created_transactions.append(txn)
-                    self.email_client.label_as_processed(txn['email_id'])
                     self.email_client.label_as_created(txn['email_id'])
                     print(f"    ✓ Created YNAB transaction")
-                    print(f"    ✓ Marked email as processed + created")
+                    print(f"    ✓ Marked email as created (will retry until created)")
                 else:
-                    print(f"    ✗ Failed to create YNAB transaction")
+                    print(f"    ✗ Failed to create YNAB transaction (will retry next run)")
 
         return created_transactions
 
