@@ -8,9 +8,10 @@
 
 ### Project Context
 - This is a Python project that automates YNAB transaction updates by parsing emails from vendors (Amazon, Venmo, etc.)
+- **Deployment**: Runs automatically via GitHub Actions every 6 hours (no server required)
 - **Email Account**: When the user refers to "email", they mean congchen5.ynabify@gmail.com
 - The main entry point is `main.py`
-- Configuration is in `.env` file
+- Configuration is in `.env` file (local) or GitHub Secrets (production)
 - Key modules:
   - `amazon_integration.py`: Processes Amazon order emails and matches to YNAB transactions
   - `venmo_integration.py`: Processes Venmo transaction emails
@@ -37,6 +38,7 @@ YNABify is an automation tool that syncs transaction details from email receipts
 - Matches emails to existing YNAB transactions or creates new ones
 - Updates YNAB with detailed item-level information
 - Labels emails to track processing status
+- **Runs automatically via GitHub Actions every 6 hours** (configured in `.github/workflows/sync-ynab.yml`)
 
 ### Architecture & Core Components
 
@@ -138,6 +140,30 @@ The project uses a simple, success-based label system with automatic retry:
 - `EMAIL_DAYS_BACK`: Only process emails from last N days (default: 60)
 - `DRY_RUN`: Run without modifications (default: False)
 
+### Deployment & Automation
+
+**GitHub Actions (Production):**
+- Runs automatically every 6 hours: 00:00, 06:00, 12:00, 18:00 UTC
+- Configured in `.github/workflows/sync-ynab.yml`
+- Uses GitHub Secrets for credentials (never commit `.env` to repo)
+- Completely serverless - no hosting or infrastructure needed
+- Free tier usage: ~240 minutes/month (well under GitHub's 2000 min/month limit)
+- View logs: GitHub repo → Actions tab → Click workflow run → Click "sync" job → Click "Run YNABify" step
+
+**Important Notes for Development:**
+- Changes to `main.py` or integration files affect production runs
+- Test locally with `DRY_RUN=True` before pushing
+- GitHub Actions runs on Ubuntu (Linux), ensure cross-platform compatibility
+- Secrets are stored in GitHub (Settings → Secrets and variables → Actions)
+- Can trigger manual runs via GitHub Actions UI for testing
+- Automatic retry system means no manual intervention needed for transient failures
+
+**Monitoring Production:**
+- Check Actions tab for run history and status
+- Each run shows full console output (same as local runs)
+- GitHub sends email notifications for workflow failures (configurable)
+- Runs continue automatically even if one fails (next run retries)
+
 ### Technical Patterns & Best Practices
 
 **Date Parsing:**
@@ -168,14 +194,18 @@ YNABify/
 ├── venmo_integration.py       # Venmo-specific logic
 ├── email_client.py           # Gmail IMAP client
 ├── ynab_client.py            # YNAB API wrapper
+├── .github/
+│   └── workflows/
+│       └── sync-ynab.yml      # GitHub Actions automation (runs every 6h)
 ├── scripts/                   # Utility scripts
 │   ├── analyze_return_emails.py
 │   ├── list_labels.py
 │   ├── README.md
 │   └── fix_venmo_duplicates.py
-├── .env                       # Configuration (gitignored)
+├── .env                       # Configuration (gitignored, local only)
 ├── .env.example              # Configuration template
 ├── SETUP.md                  # Setup instructions
+├── GITHUB_ACTIONS_SETUP.md   # GitHub Actions setup guide
 ├── CLAUDE.md                 # This file
 └── README.md                 # Project overview
 ```
@@ -210,31 +240,45 @@ python scripts/analyze_return_emails.py
 
 ### Recent Major Work
 
-1. **Success-Only Label System with Automatic Retry**:
+1. **GitHub Actions Automation**:
+   - Deployed to GitHub Actions - runs automatically every 6 hours
+   - Completely serverless (no infrastructure or hosting required)
+   - Free tier usage (~240 min/month)
+   - Secrets managed securely via GitHub
+   - Full production logs viewable in Actions tab
+
+2. **Success-Only Label System with Automatic Retry**:
    - Removed `processed` label entirely
    - Only use success labels: `matched` (Amazon) and `created` (Venmo)
    - Added date-based filtering (EMAIL_DAYS_BACK=60)
    - Automatic retry until success - solves timing issues
    - No manual reprocessing needed
 
-2. **Memo Truncation Preservation**:
+3. **Memo Truncation Preservation**:
    - Preserves `...` indicator when updating memos
    - Maintains visibility of truncation state
 
-3. **DRY_RUN Mode**:
+4. **DRY_RUN Mode**:
    - Safe testing mode that makes no modifications
    - No email labeling, no YNAB updates
 
-4. **Scripts Organization**:
+5. **Scripts Organization**:
    - Created scripts/ folder with utilities
    - Comprehensive README for each script
 
-5. **Documentation**:
+6. **Documentation**:
    - Added email account context (congchen5.ynabify@gmail.com)
    - Comprehensive SETUP.md guide
    - Script documentation
 
 ### Known Patterns & Gotchas
+
+**Production Deployment:**
+- Code changes pushed to `main` branch affect production runs (GitHub Actions)
+- Always test locally with `DRY_RUN=True` before pushing
+- GitHub Actions runs every 6 hours automatically
+- Check Actions tab for production logs and status
+- Can trigger manual runs via GitHub UI for immediate testing
 
 **Email Labeling:**
 - Only apply success labels: `matched` (Amazon) or `created` (Venmo)
