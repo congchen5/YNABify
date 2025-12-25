@@ -62,20 +62,98 @@ class AmazonIntegration:
 
         return None
 
-    def parse_email(self, email_dict: Dict) -> Optional[Dict]:
+    def _parse_order_sections(self, body: str, soup: BeautifulSoup) -> List[Dict]:
         """
-        Parse Amazon order confirmation email (including forwarded emails)
+        Parse multiple order sections from a single email.
+        Some Amazon emails contain multiple orders bundled together.
+
+        Args:
+            body: Email body HTML
+            soup: BeautifulSoup parsed body
+
+        Returns:
+            List of order section dicts, each containing:
+            - order_number: Order ID
+            - amount: Grand Total
+            - first_item: First item name in that order section
+        """
+        # Extract text for easier pattern matching
+        text = soup.get_text()
+
+        # Find all order numbers and their positions
+        order_pattern = r'Order #[^\d]*(\d{3}-\d{7}-\d{7})'
+        order_matches = [(m.group(1), m.start()) for m in re.finditer(order_pattern, text)]
+
+        # Find all Grand Totals and their positions
+        total_pattern = r'Grand Total:\s*\$?([0-9,]+\.\d{2})'
+        total_matches = [(m.group(1), m.start()) for m in re.finditer(total_pattern, text)]
+
+        if not order_matches or not total_matches:
+            return []
+
+        # Match each order to its Grand Total (the next one after it)
+        # Use a dict to deduplicate by order number
+        orders_dict = {}
+        for order_num, order_pos in order_matches:
+            # Skip if we already processed this order number
+            if order_num in orders_dict:
+                continue
+
+            # Find the next Grand Total after this order
+            matching_total = None
+            for total_amount, total_pos in total_matches:
+                if total_pos > order_pos:
+                    matching_total = total_amount
+                    break
+
+            if matching_total:
+                # Extract first item name from this order section
+                # Look for text between this order and the next order (or Grand Total)
+                section_end = total_pos + 100  # Some buffer after Grand Total
+                section_text = text[order_pos:section_end]
+
+                # Try to find item names - look for patterns like "Item Name ... Quantity: N"
+                item_match = re.search(r'([A-Z][^\n]{10,80}?)\s+Quantity:', section_text)
+                first_item = None
+                if item_match:
+                    first_item = item_match.group(1).strip()
+                    # Remove common prefixes
+                    first_item = re.sub(r'^(View or edit order\s+|View order\s+)', '', first_item, flags=re.IGNORECASE)
+                    first_item = first_item.strip()
+                    # Truncate if needed
+                    if len(first_item) > 50:
+                        first_item = first_item[:47] + '...'
+
+                orders_dict[order_num] = {
+                    'order_number': order_num,
+                    'amount': float(matching_total.replace(',', '')),
+                    'first_item': first_item
+                }
+
+        return list(orders_dict.values())
+
+    def parse_email(self, email_dict: Dict) -> List[Dict]:
+        """
+        Parse Amazon order confirmation email (including forwarded emails).
         Handles both purchases and refunds internally.
+        Can return multiple transactions if email contains multiple orders.
 
         Args:
             email_dict: Email dictionary from EmailClient.get_unprocessed_emails
 
         Returns:
-            Dictionary with Amazon order details or None
+            List of dicts with Amazon order details (empty list if parsing fails)
         """
         try:
             body = email_dict['body']
             soup = BeautifulSoup(body, 'html.parser')
+            subject = email_dict['subject']
+
+            # Try to parse multiple orders first
+            order_sections = self._parse_order_sections(body, soup)
+
+            if len(order_sections) > 1:
+                print(f"\n  Found {len(order_sections)} orders in this email")
 
             # Debug: Print more of body to see order details
             print(f"\n  DEBUG: Searching for order number and total...")
@@ -177,31 +255,43 @@ class AmazonIntegration:
                 if item_text and len(item_text) > 5:
                     items.append(item_text)
 
-            if not order_number and not amount:
-                return None
-
-            # Extract item name from subject line
-            subject = email_dict['subject']
-
             # Detect if this is a return transaction
             is_return = 'return' in subject.lower()
 
+            # Use order_sections if found (handles both single and multi-order cases)
+            if order_sections:
+                transactions = []
+                for section in order_sections:
+                    order_details_url = f"https://www.amazon.com/gp/your-account/order-details?orderID={section['order_number']}"
+
+                    transactions.append({
+                        'source': 'amazon',
+                        'order_number': section['order_number'],
+                        'order_details_url': order_details_url,
+                        'date': order_date,
+                        'amount': section['amount'],
+                        'items': [],
+                        'item_name_from_subject': section['first_item'],  # Extracted from body
+                        'description': f"Amazon Order {section['order_number']}",
+                        'email_subject': subject,
+                        'email_id': email_dict['id'],
+                        'is_return': is_return
+                    })
+                return transactions
+
+            # Fallback: old parsing logic if order_sections extraction failed
+            if not order_number and not amount:
+                return []
+
+            # For returns, still try to extract from subject as fallback
             item_name_from_subject = None
             if is_return:
-                # For return emails: extract from return-specific patterns
                 print(f"  Detected RETURN transaction")
                 item_name_from_subject = self._extract_return_item_name(subject)
                 if item_name_from_subject:
                     print(f"  Extracted return item: {item_name_from_subject}")
-            elif 'Ordered:' in subject:
-                # For purchase emails: extract from "Ordered:" pattern
-                # Handle formats like: "Ordered: Item..." or "Ordered: 2 'Item...'"
-                match = re.search(r'Ordered:.*?["\']([^"\']+)', subject)
-                if match:
-                    item_name_from_subject = match.group(1).strip()
-                    # Keep the "..." to indicate truncation
 
-            return {
+            return [{
                 'source': 'amazon',
                 'order_number': order_number,
                 'order_details_url': order_details_url,
@@ -210,14 +300,14 @@ class AmazonIntegration:
                 'items': items,
                 'item_name_from_subject': item_name_from_subject,
                 'description': f"Amazon Order {order_number}" if order_number else "Amazon Purchase",
-                'email_subject': email_dict['subject'],
+                'email_subject': subject,
                 'email_id': email_dict['id'],
                 'is_return': is_return
-            }
+            }]
 
         except Exception as e:
             print(f"Error parsing Amazon email: {e}")
-            return None
+            return []
 
     def match_to_ynab(self, amazon_txn: dict, ynab_transactions: list) -> Optional[dict]:
         """
@@ -336,11 +426,12 @@ class AmazonIntegration:
         matches = []
         amazon_transactions = []
 
-        # Parse each email
+        # Parse each email (can return multiple transactions per email)
         for email_dict in emails:
-            parsed = self.parse_email(email_dict)
-            if parsed:
-                amazon_transactions.append(parsed)
+            parsed_list = self.parse_email(email_dict)
+            if parsed_list:
+                # parse_email now returns a list of transactions
+                amazon_transactions.extend(parsed_list)
 
         if not amazon_transactions:
             print("  No unread Amazon transaction emails found")
