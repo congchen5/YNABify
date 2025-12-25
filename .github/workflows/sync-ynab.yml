@@ -1,0 +1,38 @@
+name: Sync YNAB Transactions
+
+on:
+  schedule:
+    # Run every 6 hours: at 00:00, 06:00, 12:00, and 18:00 UTC
+    - cron: '0 */6 * * *'
+
+  # Allow manual triggering from GitHub UI
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run YNABify
+      env:
+        YNAB_ACCESS_TOKEN: ${{ secrets.YNAB_ACCESS_TOKEN }}
+        YNAB_BUDGET_ID: ${{ secrets.YNAB_BUDGET_ID }}
+        EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
+        EMAIL_APP_PASSWORD: ${{ secrets.EMAIL_APP_PASSWORD }}
+        EMAIL_IMAP_SERVER: 'imap.gmail.com'
+        EMAIL_IMAP_PORT: '993'
+      run: python main.py
