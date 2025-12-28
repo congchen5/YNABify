@@ -256,7 +256,8 @@ class AmazonIntegration:
                     items.append(item_text)
 
             # Detect if this is a return transaction
-            is_return = 'return' in subject.lower()
+            # Check for both 'return' and 'refund' keywords
+            is_return = 'return' in subject.lower() or 'refund' in subject.lower()
 
             # Use order_sections if found (handles both single and multi-order cases)
             if order_sections:

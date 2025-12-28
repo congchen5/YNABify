@@ -48,7 +48,9 @@ class EmailProcessor:
         subject = email_dict.get('subject', '')
 
         # Check subject line patterns (for forwarded emails)
-        if 'Ordered:' in subject or 'order' in subject.lower():
+        # Amazon patterns: orders, shipments, and returns
+        amazon_keywords = ['ordered:', 'order', 'return request', 'refund', 'drop off', 'dropoff confirmed']
+        if any(keyword in subject.lower() for keyword in amazon_keywords):
             return 'amazon'
         elif 'paid you' in subject.lower() or 'you paid' in subject.lower() or 'charged you' in subject.lower():
             return 'venmo'
