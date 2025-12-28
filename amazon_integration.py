@@ -34,6 +34,7 @@ class AmazonIntegration:
         Patterns:
         - "Fwd: Return request confirmed for <ITEM_NAME>..."
         - "Fwd: Your return drop off confirmation for <ITEM_NAME>...."
+        - "Fwd: Your refund for <ITEM_NAME>...."
 
         Args:
             subject: Email subject line
@@ -54,6 +55,14 @@ class AmazonIntegration:
 
         # Try pattern 2: "Your return drop off confirmation for ..."
         match = re.search(r'return drop off confirmation for\s+(.+)', clean_subject, re.IGNORECASE)
+        if match:
+            item_name = match.group(1).strip()
+            # Decode HTML entities (&amp, &quot, etc.)
+            item_name = html.unescape(item_name)
+            return item_name
+
+        # Try pattern 3: "Your refund for ..."
+        match = re.search(r'your refund for\s+(.+)', clean_subject, re.IGNORECASE)
         if match:
             item_name = match.group(1).strip()
             # Decode HTML entities (&amp, &quot, etc.)
