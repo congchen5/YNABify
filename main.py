@@ -11,6 +11,7 @@ from email_client import EmailClient
 from amazon_integration import AmazonIntegration
 from venmo_integration import VenmoIntegration
 from email_processor import EmailProcessor
+from user_detector import UserDetector
 
 # Configuration
 DEBUG_TRANSACTION_LIMIT = 1000  # Limit number of transactions to process for debugging
@@ -124,9 +125,13 @@ def main():
         print("\n=== Processing Email Transactions ===\n")
         print(f"Processing emails from the last {EMAIL_DAYS_BACK} days")
 
+        # Initialize user detector for multi-user support
+        user_detector = UserDetector()
+        print("✓ Initialized multi-user support (Cong & Margi)")
+
         # Initialize integrations
-        amazon_integration = AmazonIntegration(ynab_client, email_client, date_buffer_days=DATE_BUFFER_DAYS, dry_run=DRY_RUN)
-        venmo_integration = VenmoIntegration(ynab_client, email_client, dry_run=DRY_RUN)
+        amazon_integration = AmazonIntegration(ynab_client, email_client, user_detector=user_detector, date_buffer_days=DATE_BUFFER_DAYS, dry_run=DRY_RUN)
+        venmo_integration = VenmoIntegration(ynab_client, email_client, user_detector=user_detector, dry_run=DRY_RUN)
 
         # Initialize email processor with integrations
         email_processor = EmailProcessor(

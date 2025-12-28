@@ -154,6 +154,7 @@ class EmailClient:
                 emails.append({
                     'id': num.decode(),
                     'from': email_message['From'],
+                    'to': email_message['To'],  # Added for multi-user support
                     'subject': subject,
                     'date': email_message['Date'],
                     'body': body_text

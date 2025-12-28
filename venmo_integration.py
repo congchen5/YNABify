@@ -9,19 +9,22 @@ from bs4 import BeautifulSoup
 
 
 class VenmoIntegration:
-    def __init__(self, ynab_client, email_client, dry_run=False):
+    def __init__(self, ynab_client, email_client, user_detector=None, dry_run=False):
         """
         Initialize Venmo integration
 
         Args:
             ynab_client: YNABClient instance
             email_client: EmailClient instance
+            user_detector: UserDetector instance for multi-user support (optional)
             dry_run: If True, don't make any modifications (default: False)
         """
         self.ynab_client = ynab_client
         self.email_client = email_client
+        self.user_detector = user_detector
         self.dry_run = dry_run
         self.venmo_account_id = None  # Will be set when we fetch accounts
+        self._account_cache = {}  # Cache for account ID lookups
 
     def parse_email(self, email_dict: Dict) -> Optional[Dict]:
         """
@@ -130,27 +133,42 @@ class VenmoIntegration:
         if ynab_transactions is None:
             ynab_transactions = []
 
-        # Find Cong Venmo account
+        # Get all YNAB accounts for dynamic lookup
         accounts = self.ynab_client.get_accounts()
-        venmo_account = None
-        for account in accounts:
-            if account.name == "Cong Venmo":
-                venmo_account = account
-                self.venmo_account_id = account.id
-                break
 
-        if not venmo_account:
-            print("  ⚠ Could not find 'Cong Venmo' account in YNAB")
-            return []
-
-        print(f"  ✓ Found Venmo account: {venmo_account.name} (ID: {venmo_account.id})")
+        # Build account cache by name
+        account_by_name = {account.name: account for account in accounts}
 
         transactions = []
 
-        # Parse each email
+        # Parse each email with user detection
         for email_dict in emails:
+            # Detect which user this email belongs to
+            user = None
+            if self.user_detector:
+                user = self.user_detector.detect_user_from_email(email_dict)
+                if not user:
+                    print(f"  ⚠ Could not determine user for email: {email_dict['subject'][:60]}")
+                    continue
+            else:
+                # Fallback: assume Cong if no user detector provided (backwards compatibility)
+                user = 'cong'
+
+            # Get the appropriate Venmo account for this user
+            account_name = self.user_detector.get_account_name(user, 'venmo') if self.user_detector else "Cong Venmo"
+            venmo_account = account_by_name.get(account_name)
+
+            if not venmo_account:
+                print(f"  ⚠ Could not find '{account_name}' account in YNAB")
+                continue
+
+            # Parse the email
             parsed = self.parse_email(email_dict)
             if parsed:
+                # Add user and account info to parsed transaction
+                parsed['user'] = user
+                parsed['account_name'] = account_name
+                parsed['account_id'] = venmo_account.id
                 transactions.append(parsed)
 
         if not transactions:
@@ -164,7 +182,9 @@ class VenmoIntegration:
             date_str = txn['date'].strftime('%Y-%m-%d')
             amount_str = f"${txn['amount']:.2f}" if txn['amount'] else "N/A"
             direction = "RECEIVED" if txn['is_received'] else "SENT"
-            print(f"  {date_str}: {amount_str} ({direction}) - {txn['name']}")
+            user_label = f"[{txn['user'].upper()}]" if txn.get('user') else ""
+            account_label = f"({txn['account_name']})" if txn.get('account_name') else ""
+            print(f"  {date_str}: {amount_str} ({direction}) - {txn['name']} {user_label} {account_label}")
             if txn['description']:
                 print(f"    Description: {txn['description']}")
 
@@ -225,8 +245,8 @@ class VenmoIntegration:
 
         # Check for duplicates in YNAB
         for ynab_txn in ynab_transactions:
-            # Only check transactions in the Venmo account
-            if ynab_txn.account_id != self.venmo_account_id:
+            # Only check transactions in the specific Venmo account
+            if ynab_txn.account_id != venmo_txn.get('account_id'):
                 continue
 
             # Parse YNAB transaction date
@@ -267,12 +287,13 @@ class VenmoIntegration:
 
             # Call YNAB API to create transaction
             result = self.ynab_client.create_transaction(
-                account_id=self.venmo_account_id,
+                account_id=venmo_txn['account_id'],
                 date=date_str,
                 amount=amount_milliunits,
                 payee_name=venmo_txn['name'],
                 memo=venmo_txn['memo'],
-                category_id=None
+                category_id=None,
+                cleared='cleared'
             )
             return result is not None
 

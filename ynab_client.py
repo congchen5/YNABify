@@ -69,7 +69,8 @@ class YNABClient:
         amount: int,  # In milliunits (e.g., $10.00 = 10000)
         payee_name: str,
         memo: Optional[str] = None,
-        category_id: Optional[str] = None
+        category_id: Optional[str] = None,
+        cleared: Optional[str] = None
     ) -> bool:
         """
         Create a new transaction in YNAB
@@ -81,6 +82,7 @@ class YNABClient:
             payee_name: Name of the payee
             memo: Optional memo/note
             category_id: Optional category ID
+            cleared: Optional cleared status ('cleared', 'uncleared', 'reconciled')
 
         Returns:
             True if successful, False otherwise
@@ -92,7 +94,8 @@ class YNABClient:
                 amount=amount,
                 payee_name=payee_name,
                 memo=memo,
-                category_id=category_id
+                category_id=category_id,
+                cleared=cleared
             )
 
             result = self.transactions_api.create_transactions(

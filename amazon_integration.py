@@ -10,18 +10,20 @@ from bs4 import BeautifulSoup
 
 
 class AmazonIntegration:
-    def __init__(self, ynab_client, email_client, date_buffer_days=1, dry_run=False):
+    def __init__(self, ynab_client, email_client, user_detector=None, date_buffer_days=1, dry_run=False):
         """
         Initialize Amazon integration
 
         Args:
             ynab_client: YNABClient instance
             email_client: EmailClient instance
+            user_detector: UserDetector instance for multi-user support (optional)
             date_buffer_days: Number of days +/- to search for matching transactions (default: 1)
             dry_run: If True, don't make any modifications (default: False)
         """
         self.ynab_client = ynab_client
         self.email_client = email_client
+        self.user_detector = user_detector
         self.date_buffer_days = date_buffer_days
         self.dry_run = dry_run
 
@@ -327,6 +329,15 @@ class AmazonIntegration:
         if amazon_amount is None:
             return None
 
+        # Get the account ID for the Amazon card this transaction should be on
+        target_account_id = None
+        if amazon_txn.get('account_name'):
+            accounts = self.ynab_client.get_accounts()
+            for account in accounts:
+                if account.name == amazon_txn['account_name']:
+                    target_account_id = account.id
+                    break
+
         # Convert to YNAB milliunits
         # Returns are positive (inflow), purchases are negative (outflow)
         if is_return:
@@ -335,6 +346,10 @@ class AmazonIntegration:
             amazon_amount_milliunits = int(-amazon_amount * 1000)  # Negative for outflow
 
         for ynab_txn in ynab_transactions:
+            # If we have a target account, only match transactions on that account
+            if target_account_id and ynab_txn.account_id != target_account_id:
+                continue
+
             # Parse YNAB transaction date (convert from string to date object)
             if isinstance(ynab_txn.date, str):
                 ynab_date = datetime.strptime(ynab_txn.date, '%Y-%m-%d').date()
@@ -426,8 +441,35 @@ class AmazonIntegration:
 
         # Parse each email (can return multiple transactions per email)
         for email_dict in emails:
+            # Detect which user this email belongs to
+            user = None
+            if self.user_detector:
+                user = self.user_detector.detect_user_from_email(email_dict)
+                if not user:
+                    print(f"  ⚠ Could not determine user for email: {email_dict['subject'][:60]}")
+                    continue
+
+                # For Margi, validate that the order is actually hers (not family member)
+                if self.user_detector.should_validate_amazon_name(user):
+                    if not self.user_detector.validate_amazon_recipient(user, email_dict['body']):
+                        print(f"  ⚠ Skipping Amazon email for {user} - recipient name doesn't match (likely family member order)")
+                        print(f"    Subject: {email_dict['subject'][:80]}")
+                        continue
+            else:
+                # Fallback: assume Cong if no user detector provided (backwards compatibility)
+                user = 'cong'
+
             parsed_list = self.parse_email(email_dict)
             if parsed_list:
+                # Add user info to each parsed transaction
+                for txn in parsed_list:
+                    txn['user'] = user
+                    # Get the appropriate Amazon account for this user
+                    if self.user_detector:
+                        txn['account_name'] = self.user_detector.get_account_name(user, 'amazon')
+                    else:
+                        txn['account_name'] = "Cong Amazon Card"
+
                 # parse_email now returns a list of transactions
                 amazon_transactions.extend(parsed_list)
 
@@ -443,7 +485,9 @@ class AmazonIntegration:
             amount_str = f"${txn['amount']:.2f}" if txn['amount'] else "N/A"
             is_return = txn.get('is_return', False)
 
-            print(f"[{idx}] Amazon Email Transaction {'(RETURN)' if is_return else ''}:")
+            user_label = f"[{txn['user'].upper()}]" if txn.get('user') else ""
+            account_label = f"({txn['account_name']})" if txn.get('account_name') else ""
+            print(f"[{idx}] Amazon Email Transaction {'(RETURN)' if is_return else ''}: {user_label} {account_label}")
             print(f"    Date: {date_str}")
             print(f"    Amount: {amount_str}")
             print(f"    Order: {txn['order_number']}")
