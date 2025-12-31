@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 
 
 class AmazonIntegration:
-    def __init__(self, ynab_client, email_client, user_detector=None, date_buffer_days=1, dry_run=False):
+    def __init__(self, ynab_client, email_client, user_detector=None, date_buffer_days=1, dry_run=False, category_classifier=None):
         """
         Initialize Amazon integration
 
@@ -20,12 +20,14 @@ class AmazonIntegration:
             user_detector: UserDetector instance for multi-user support (optional)
             date_buffer_days: Number of days +/- to search for matching transactions (default: 1)
             dry_run: If True, don't make any modifications (default: False)
+            category_classifier: CategoryClassifier instance for automatic categorization (optional)
         """
         self.ynab_client = ynab_client
         self.email_client = email_client
         self.user_detector = user_detector
         self.date_buffer_days = date_buffer_days
         self.dry_run = dry_run
+        self.category_classifier = category_classifier
 
     def _extract_return_item_name(self, subject: str) -> Optional[str]:
         """
@@ -122,16 +124,16 @@ class AmazonIntegration:
                 section_text = text[order_pos:section_end]
 
                 # Try to find item names - look for patterns like "Item Name ... Quantity: N"
-                item_match = re.search(r'([A-Z][^\n]{10,80}?)\s+Quantity:', section_text)
+                # Updated: No truncation - capture full item name (up to 200 chars before "Quantity:")
+                item_match = re.search(r'([A-Z][^\n]{10,200}?)\s+Quantity:', section_text)
                 first_item = None
                 if item_match:
                     first_item = item_match.group(1).strip()
-                    # Remove common prefixes
-                    first_item = re.sub(r'^(View or edit order\s+|View order\s+)', '', first_item, flags=re.IGNORECASE)
+                    # Remove all prefixes up to and including "View or edit order" or "View order"
+                    # This handles Unicode characters and varying whitespace
+                    first_item = re.sub(r'^.*?(?:View\s+(?:or\s+edit\s+)?order)\s*', '', first_item, flags=re.IGNORECASE)
                     first_item = first_item.strip()
-                    # Truncate if needed
-                    if len(first_item) > 50:
-                        first_item = first_item[:47] + '...'
+                    # No truncation - show full item name
 
                 orders_dict[order_num] = {
                     'order_number': order_num,
@@ -259,9 +261,20 @@ class AmazonIntegration:
             items = []
             # Look for product names in the email
             item_matches = soup.find_all('a', href=re.compile(r'/dp/[A-Z0-9]+'))
-            for item in item_matches[:5]:  # Limit to first 5 items
+            for item in item_matches:  # No limit - get all items
                 item_text = item.get_text(strip=True)
-                if item_text and len(item_text) > 5:
+                # Filter out UI text and common patterns
+                if item_text and len(item_text) > 10:
+                    # Skip if it's mostly UI text
+                    skip_patterns = [
+                        r'^Order\s*#',
+                        r'^View\s+order',
+                        r'^View\s+or\s+edit\s+order',
+                        r'^Track\s+package',
+                        r'^See\s+all',
+                    ]
+                    if any(re.match(pattern, item_text, re.IGNORECASE) for pattern in skip_patterns):
+                        continue
                     items.append(item_text)
 
             # Detect if this is a return transaction
@@ -274,13 +287,21 @@ class AmazonIntegration:
                 for section in order_sections:
                     order_details_url = f"https://www.amazon.com/gp/your-account/order-details?orderID={section['order_number']}"
 
+                    # For multi-order emails, use first_item if available, otherwise use extracted items
+                    # Note: extracted items are for the entire email, not per-order
+                    items_for_memo = []
+                    if section.get('first_item'):
+                        items_for_memo = [section['first_item']]
+                    elif items:
+                        items_for_memo = items
+
                     transactions.append({
                         'source': 'amazon',
                         'order_number': section['order_number'],
                         'order_details_url': order_details_url,
                         'date': order_date,
                         'amount': section['amount'],
-                        'items': [],
+                        'items': items_for_memo,
                         'item_name_from_subject': section['first_item'],  # Extracted from body
                         'description': f"Amazon Order {section['order_number']}",
                         'email_subject': subject,
@@ -395,19 +416,17 @@ class AmazonIntegration:
         """
         memo_parts = []
 
-        # Prefer item name from subject line, fall back to parsed items
-        if transaction.get('item_name_from_subject'):
+        # Show ALL items (no truncation, no limit)
+        if transaction.get('items') and len(transaction['items']) > 0:
+            # Join all items with " | " separator for readability
+            items_text = ' | '.join(transaction['items'])
+            memo_parts.append(items_text)
+        elif transaction.get('item_name_from_subject'):
+            # Fallback to subject line item (may be truncated by Amazon)
             item_name = transaction['item_name_from_subject']
-            # If item name already ends with "...", keep it; otherwise add a period
-            if not item_name.endswith('...'):
-                item_name += '.'
+            # Remove "..." truncation marker if present
+            item_name = item_name.rstrip('.').rstrip()
             memo_parts.append(item_name)
-        elif transaction.get('items'):
-            items = transaction['items'][:3]
-            items_text = ', '.join(items)
-            if len(transaction['items']) > 3:
-                items_text += f' +{len(transaction["items"]) - 3} more'
-            memo_parts.append(f"{items_text}.")
 
         # Add order details link with "Amazon Link: " prefix
         if transaction.get('order_details_url'):
@@ -537,6 +556,24 @@ class AmazonIntegration:
                         update_success = True
                     else:
                         print(f"      ✗ Failed to update YNAB transaction memo")
+
+                # Classify and update category if classifier is available
+                if self.category_classifier and ynab_match and update_success:
+                    category_id = self.category_classifier.classify_amazon_transaction(txn, ynab_match)
+                    if category_id:
+                        category_name = self.category_classifier.get_category_name(category_id)
+
+                        # Show classification method
+                        force_llm = 'amazon' in [s.lower() for s in self.category_classifier.rules.get('llm', {}).get('force_llm_for', [])]
+                        method = "LLM" if force_llm else "Rules/LLM"
+
+                        if self.dry_run:
+                            print(f"      [DRY RUN] Would set category: {category_name} ({method})")
+                        else:
+                            if self.ynab_client.update_transaction_category(ynab_match.id, category_id):
+                                print(f"      ✓ Set category: {category_name} ({method})")
+                            else:
+                                print(f"      ✗ Failed to set category")
 
                 matches.append({
                     'amazon': txn,

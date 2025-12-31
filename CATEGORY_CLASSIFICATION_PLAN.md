@@ -2,203 +2,146 @@
 
 ## Overview
 
-Add intelligent category classification using **hybrid approach** (rule-based + LLM fallback) that is **conservative** (only sets category when confident) and handles **multi-item orders** using highest-price item.
+Add intelligent category classification to YNABify using a **hybrid approach** (rule-based + LLM fallback) that is **conservative** (only sets category when confident ≥75%) and handles **multi-item orders** using the most prominent item.
 
 ## User Requirements (Confirmed)
-- ✅ Hybrid: Rules first, Claude Haiku for unknowns (~$2-3/month)
+- ✅ Hybrid: Keyword rules first, Claude Haiku LLM for unknowns (~$2-3/month)
 - ✅ Conservative: Leave uncategorized if uncertain (<75% confidence)
-- ✅ Multi-item: Use highest-price item for categorization
+- ✅ Multi-item: Use highest-price/most prominent item for categorization
 - ✅ Manual approval: User still reviews all transactions in YNAB
+- ✅ Works for both Amazon and Venmo transactions
+- ✅ Generic rules across all platforms (not platform-specific)
+- ✅ Bulk categorization of ALL existing YNAB transactions
+- ✅ Learning system to generate rules from approved transactions
 
 ## Architecture
 
 ### New Components
 
 **1. CategoryClassifier (`category_classifier.py`)** - NEW MODULE
-- Core classification engine with two methods:
-  - `classify_amazon_transaction(transaction)` → category or None
-  - `classify_venmo_transaction(transaction)` → category or None
-- Rule-based matching (keyword patterns in YAML)
-- LLM fallback (Anthropic Claude Haiku)
-- Confidence scoring and thresholding
-- Category name → YNAB ID mapping with fuzzy matching
 
-**2. Category Rules (`category_rules.yaml`)** - NEW CONFIG FILE
-```yaml
-rules:
-  amazon_items:
-    - category: "Groceries"
-      keywords: ["food", "snack", "coffee", "protein bar"]
-      confidence: 0.95
-    - category: "Electronics"
-      keywords: ["cable", "charger", "usb", "hdmi"]
-      confidence: 0.9
-  venmo_payees:
-    - category: "Dining Out"
-      keywords: ["restaurant", "cafe", "pizza"]
-      confidence: 0.9
+Core classification engine with methods for Amazon, Venmo, and generic transactions.
 
-llm:
-  provider: "anthropic"
-  model: "claude-3-haiku-20240307"
-  confidence_threshold: 0.8
+**2. Category Rules Config (`category_rules.yaml`)** - NEW FILE
 
-conservative:
-  minimum_confidence: 0.75
-  skip_on_uncertainty: true
-```
-
-### Integration Points
-
-**Amazon Integration** (`amazon_integration.py:485`)
-- After memo update succeeds
-- Add classification call
-- Update category if confident
-- Respect DRY_RUN mode
-
-**Venmo Integration** (`venmo_integration.py:268-276`)
-- Before transaction creation
-- Get category from classifier
-- Pass to `create_transaction()` instead of None
-
-**Main** (`main.py:128+`)
-- Initialize CategoryClassifier with YNAB client
-- Pass classifier to both integrations
-- Add classification stats to summary
+**IMPORTANT**:
+- Rules are **generic across all platforms** (Amazon, Venmo, etc.)
+- Category names MUST match EXACTLY what exists in your YNAB budget
+- Run `ynab_client.get_categories()` first to see available categories
+- A keyword like "baby wipes" should match to "Luca Consumables" regardless of source
 
 ## Implementation Steps
 
-### Phase 1: Foundation
-1. Create `category_classifier.py` with class structure
-2. Implement rule-based matching (keyword search)
-3. Implement YNAB category fetching/caching
-4. Create `category_rules.yaml` with 10-15 starter rules
-5. Add `pyyaml` to requirements.txt
+### Phase 1: Foundation (Rules-Based Only)
 
-### Phase 2: Integration
-6. Modify `amazon_integration.py`:
-   - Add `category_classifier` param to `__init__` (line 13)
-   - After line 485, add classification logic
-7. Modify `venmo_integration.py`:
-   - Add `category_classifier` param to `__init__` (line 12)
-   - Before line 269, get category from classifier
-8. Modify `main.py`:
-   - Add CategoryClassifier import (line 9)
-   - Initialize classifier (after line 128)
-   - Pass to integrations
-   - Add stats to summary (after line 195)
+**Step 1.1: Create CategoryClassifier Module**
+- File: `category_classifier.py`
+- Implement class structure with classification methods
+- Implement rule-based matching only (no LLM yet)
+- Implement YNAB category caching and name-to-ID mapping
 
-### Phase 3: LLM Enhancement
-9. Install `anthropic` package
-10. Implement `_classify_with_llm()` method
-11. Add error handling for API failures
-12. Add `ANTHROPIC_API_KEY` to `.env` and GitHub Secrets
-13. Update `.github/workflows/sync-ynab.yml` with new env var
+**Step 1.2: Fetch YNAB Categories**
+- Use `ynab_client.get_categories()` to fetch all available categories
+- Display category names and IDs for user reference
+- This ensures we only create rules for categories that actually exist in YNAB
 
-### Phase 4: Testing & Deployment
-14. Test locally with DRY_RUN=True
-15. Trigger manual GitHub Actions run
-16. Monitor logs and verify categories in YNAB
-17. Update documentation (CLAUDE.md, SETUP.md, README.md)
+**Step 1.3: Create Category Rules Config**
+- File: `category_rules.yaml`
+- Add 10-15 starter rules based on ACTUAL YNAB categories from Step 1.2
+- NOTE: Category names MUST match exactly what's in YNAB
 
-## Classification Logic Flow
+**Step 1.4: Update Dependencies**
+- Add `pyyaml` to `requirements.txt`
+- Run `pip install pyyaml` locally
 
-```
-Transaction arrives
-    ↓
-Try rule-based matching
-    ├─ Match found (confidence >= 0.75)
-    │   └─ Return category
-    └─ No match or low confidence
-        ↓
-    Try LLM fallback (if API key set)
-        ├─ LLM confident (>= 0.8)
-        │   └─ Return category
-        └─ LLM uncertain or failed
-            └─ Return None (leave uncategorized)
-```
+**Step 1.5: Test CategoryClassifier Standalone**
+- Test rule matching and category mapping
+
+### Phase 2: Integration (Amazon & Venmo)
+
+**Step 2.1: Integrate with Amazon**
+- Modify `amazon_integration.py` to add classifier parameter and classification logic
+
+**Step 2.2: Integrate with Venmo**
+- Modify `venmo_integration.py` to add classifier parameter and classification logic
+
+**Step 2.3: Initialize in Main**
+- Modify `main.py` to initialize and pass classifier to integrations
+
+**Step 2.4: Test End-to-End (DRY_RUN Mode)**
+- Test with real Amazon and Venmo emails
+
+### Phase 3: LLM Enhancement (Optional but Recommended)
+
+**Step 3.1: Install Anthropic SDK**
+**Step 3.2: Implement LLM Fallback**
+**Step 3.3: Add Environment Variables**
+**Step 3.4: Test LLM Fallback**
+
+### Phase 4: Logging & Monitoring
+
+**Step 4.1: Add Uncertain Item Logging**
+**Step 4.2: Add .gitignore Entry**
+**Step 4.3: Add Classification Stats**
+
+### Phase 5: Testing & Deployment
+
+**Step 5.1: Local Testing (Full Workflow)**
+**Step 5.2: Deploy to GitHub Actions**
+**Step 5.3: Monitor First Week**
+
+### Phase 6: Bulk Categorization (Existing YNAB Transactions)
+
+**Step 6.1: Create Bulk Categorization Script**
+- File: `scripts/bulk_categorize.py`
+- Apply category classification to ALL existing YNAB transactions across all accounts
+
+**IMPORTANT**: Process ALL transactions by default, even if they already have a category. YNAB's auto-categorization is often wrong.
+
+**Step 6.2: Implement Bulk Classification Logic**
+- Default: process all transactions (skip_categorized=False)
+- Track: updated, newly_classified, no_match
+
+**Step 6.3: Test Bulk Categorization**
+- Test on small date ranges first with DRY_RUN
+
+### Phase 7: Learning System (Learn from Approved Transactions)
+
+**Step 7.1: Define "Approved" Transaction Criteria**
+- Approved = has category set + is cleared/approved in YNAB
+- Store checkpoint timestamp for incremental learning
+
+**Step 7.2: Create Learning Script**
+- File: `scripts/learn_from_ynab.py`
+- Analyze approved transactions and generate rules
+
+**Step 7.3: Implement Learning Logic**
+- Frequency analysis to extract keywords
+- Append new rules (preserve existing)
+
+**Step 7.4: Keyword Extraction Strategy**
+**Step 7.5: Rule Preservation Strategy**
+**Step 7.6: Test Learning System**
+
+### Phase 8: Documentation
+
+**Step 8.1: Update CLAUDE.md**
+**Step 8.2: Update SETUP.md**
+**Step 8.3: Update README.md**
 
 ## Key Design Decisions
 
-**Why Claude Haiku?**
-- Cheapest Claude model ($0.25/$1.25 per million tokens)
-- Fast enough for batch processing (~1-2 sec)
-- Excellent at structured categorization tasks
-- Cost: ~$0.0001 per call = ~$1-3/month total
+**Generic Rules Across Platforms:**
+- Rules are platform-agnostic: same keywords work for Amazon, Venmo, or any future source
+- Example: "baby wipes" → "Luca Consumables" works whether from Amazon order or Venmo payment
+- Simplifies maintenance: one rule set instead of multiple platform-specific sets
 
-**Multi-Item Handling:**
-- Use `item_name_from_subject` (extracted from email subject, usually most prominent)
-- Fallback to first item in `items[]` array
-- Note: Amazon emails don't always include per-item prices, so "highest price" = "most prominent"
+**Bulk Categorization:**
+- Default behavior: overwrite all categories (YNAB auto-categorization is often wrong)
+- Use skip_categorized=True flag only if you trust existing categories
 
-**Conservative Approach:**
-- Minimum confidence threshold: 0.75 (adjustable in config)
-- Log uncertain items to `classification_uncertain.log` (gitignored)
-- Review monthly to build better rules
+**Learning System:**
+- Checkpoint system prevents reprocessing same transactions
+- Learned rules marked with metadata for easy identification
 
-**Error Handling:**
-- LLM API down → skip classification, don't fail run
-- Category not found → leave uncategorized
-- Invalid rules file → disable classification gracefully
-- Never fail entire run due to classification issues
-
-## Environment Variables
-
-**Add to `.env`:**
-```
-ANTHROPIC_API_KEY=your_key_here
-```
-
-**Add to GitHub Secrets:**
-- Name: `ANTHROPIC_API_KEY`
-- Value: Get from https://console.anthropic.com/
-
-**Update workflow** (`.github/workflows/sync-ynab.yml`):
-```yaml
-env:
-  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-```
-
-## Success Metrics
-
-**After 1 week:**
-- 70%+ of transactions automatically categorized
-- <5% incorrect categories
-- <$0.50 LLM usage
-
-**After 1 month:**
-- 85%+ coverage
-- 20+ rules added from uncertain log
-- 80%+ reduction in manual categorization work
-
-## Maintenance Plan
-
-**Weekly:**
-- Review `classification_uncertain.log`
-- Identify common patterns
-- Add new keywords to `category_rules.yaml`
-
-**Monthly:**
-- Check LLM usage and costs in logs
-- Adjust confidence thresholds if needed
-- Update documentation with new rules
-
-## Critical Files
-
-**New Files:**
-- `category_classifier.py` - Classification engine
-- `category_rules.yaml` - Keyword rules and config
-- `classification_uncertain.log` - Logged uncertain items (gitignored)
-- `test_category_classifier.py` - Unit tests
-
-**Modified Files:**
-- `amazon_integration.py` (lines 13, 485+) - Add classifier
-- `venmo_integration.py` (lines 12, 268-276) - Add classifier
-- `main.py` (lines 9, 128+, 195+) - Initialize & integrate
-- `.env.example` - Document ANTHROPIC_API_KEY
-- `.github/workflows/sync-ynab.yml` - Add env var
-- `requirements.txt` - Add anthropic, pyyaml
-- `.gitignore` - Add classification_uncertain.log
-
-**Unchanged (Used, Not Modified):**
-- `ynab_client.py` (lines 110-136, 188-200) - Existing category methods
+See full plan for complete details.

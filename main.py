@@ -12,11 +12,12 @@ from amazon_integration import AmazonIntegration
 from venmo_integration import VenmoIntegration
 from email_processor import EmailProcessor
 from user_detector import UserDetector
+from category_classifier import CategoryClassifier
 
 # Configuration
 DEBUG_TRANSACTION_LIMIT = 1000  # Limit number of transactions to process for debugging
 DATE_BUFFER_DAYS = 5  # Number of days +/- to search for matching transactions
-EMAIL_DAYS_BACK = 60  # Only process emails from the last N days
+EMAIL_DAYS_BACK = 10  # Only process emails from the last N days
 DRY_RUN = False  # When True, run without making any modifications (no email labels, no YNAB updates)
 
 
@@ -129,9 +130,13 @@ def main():
         user_detector = UserDetector()
         print("✓ Initialized multi-user support (Cong & Margi)")
 
+        # Initialize category classifier
+        category_classifier = CategoryClassifier(ynab_client)
+        print("✓ Initialized category classifier")
+
         # Initialize integrations
-        amazon_integration = AmazonIntegration(ynab_client, email_client, user_detector=user_detector, date_buffer_days=DATE_BUFFER_DAYS, dry_run=DRY_RUN)
-        venmo_integration = VenmoIntegration(ynab_client, email_client, user_detector=user_detector, dry_run=DRY_RUN)
+        amazon_integration = AmazonIntegration(ynab_client, email_client, user_detector=user_detector, date_buffer_days=DATE_BUFFER_DAYS, dry_run=DRY_RUN, category_classifier=category_classifier)
+        venmo_integration = VenmoIntegration(ynab_client, email_client, user_detector=user_detector, dry_run=DRY_RUN, category_classifier=category_classifier)
 
         # Initialize email processor with integrations
         email_processor = EmailProcessor(

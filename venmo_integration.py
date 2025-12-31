@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 
 
 class VenmoIntegration:
-    def __init__(self, ynab_client, email_client, user_detector=None, dry_run=False):
+    def __init__(self, ynab_client, email_client, user_detector=None, dry_run=False, category_classifier=None):
         """
         Initialize Venmo integration
 
@@ -18,10 +18,12 @@ class VenmoIntegration:
             email_client: EmailClient instance
             user_detector: UserDetector instance for multi-user support (optional)
             dry_run: If True, don't make any modifications (default: False)
+            category_classifier: CategoryClassifier instance for automatic categorization (optional)
         """
         self.ynab_client = ynab_client
         self.email_client = email_client
         self.user_detector = user_detector
+        self.category_classifier = category_classifier
         self.dry_run = dry_run
         self.venmo_account_id = None  # Will be set when we fetch accounts
         self._account_cache = {}  # Cache for account ID lookups
@@ -200,6 +202,18 @@ class VenmoIntegration:
                     print(f"    ✓ Marked email as created")
                 continue
 
+            # Classify transaction if classifier is available
+            if self.category_classifier:
+                category_id = self.category_classifier.classify_venmo_transaction(txn)
+                if category_id:
+                    category_name = self.category_classifier.get_category_name(category_id)
+                    txn['category_id'] = category_id
+                    print(f"    💡 Suggested category: {category_name}")
+                else:
+                    txn['category_id'] = None
+            else:
+                txn['category_id'] = None
+
             # Create YNAB transaction
             if self.dry_run:
                 print(f"    [DRY RUN] Would create YNAB transaction")
@@ -292,7 +306,7 @@ class VenmoIntegration:
                 amount=amount_milliunits,
                 payee_name=venmo_txn['name'],
                 memo=venmo_txn['memo'],
-                category_id=None,
+                category_id=venmo_txn.get('category_id'),
                 cleared='cleared'
             )
             return result is not None

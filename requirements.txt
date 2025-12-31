@@ -16,3 +16,9 @@ beautifulsoup4>=4.12.0
 
 # Data handling
 python-dateutil>=2.8.2
+
+# YAML parsing (for category rules)
+pyyaml>=6.0
+
+# AI classification (for LLM fallback)
+anthropic>=0.40.0

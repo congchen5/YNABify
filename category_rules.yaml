@@ -1,0 +1,213 @@
+# Category Classification Rules
+# Rules are generic across all platforms (Amazon, Venmo, etc.)
+# Category names must match EXACTLY what exists in YNAB (fuzzy matching handles emojis)
+
+rules:
+  # Luca-related purchases
+  - category: "Consumables"  # Matches "👶 Consumables"
+    keywords:
+      - "baby wipes"
+      - "diapers"
+      - "diaper"
+      - "formula"
+      - "baby food"
+      - "pacifier"
+      - "baby"
+      - "infant"
+      - "pampers"
+      - "huggies"
+    confidence: 0.95
+
+  - category: "Gear & Clothing"  # Matches "👕 Gear & Clothing"
+    keywords:
+      - "onesie"
+      - "baby clothes"
+      - "stroller"
+      - "car seat"
+      - "crib"
+      - "baby gear"
+    confidence: 0.9
+
+  # Food & Dining
+  - category: "Groceries"  # Matches "🥦 Groceries"
+    keywords:
+      - "groceries"
+      - "safeway"
+      - "whole foods"
+      - "trader joe"
+      - "costco"
+      - "target"
+      - "walmart"
+      - "food"
+      - "snack"
+      - "protein bar"
+      - "vitamins"
+      - "milk"
+      - "eggs"
+      - "produce"
+      - "meat"
+      - "cheese"
+    confidence: 0.95
+
+  - category: "Restaurants"  # Matches "🍽️ Restaurants"
+    keywords:
+      - "restaurant"
+      - "pizza"
+      - "burger"
+      - "sushi"
+      - "doordash"
+      - "uber eats"
+      - "grubhub"
+      - "takeout"
+      - "delivery"
+      - "dine"
+      - "dining"
+    confidence: 0.9
+
+  - category: "Cafe & Coffee"  # Matches "☕️ Cafe & Coffee"
+    keywords:
+      - "coffee"
+      - "cafe"
+      - "starbucks"
+      - "philz"
+      - "peet"
+      - "espresso"
+      - "latte"
+    confidence: 0.95
+
+  # Home & Household
+  - category: "Home Expense"  # Matches "🏠 Home Expense"
+    keywords:
+      - "home depot"
+      - "lowes"
+      - "ace hardware"
+      - "hardware"
+      - "tool"
+      - "paint"
+      - "lumber"
+      - "home improvement"
+      - "paper towel"
+      - "trash bag"
+      - "cleaner"
+      - "detergent"
+      - "soap"
+      - "sponge"
+      - "household"
+    confidence: 0.9
+
+  # Transportation
+  - category: "Fuel"  # Matches "⛽️ Fuel"
+    keywords:
+      - "gas"
+      - "fuel"
+      - "shell"
+      - "chevron"
+      - "arco"
+      - "76"
+      - "exxon"
+      - "mobil"
+    confidence: 0.95
+
+  - category: "Parking"  # Matches "🅿️ Parking"
+    keywords:
+      - "parking"
+      - "parkme"
+      - "spothero"
+      - "park"
+    confidence: 0.95
+
+  - category: "Transportation"  # Matches "🚌 Transportation"
+    keywords:
+      - "uber"
+      - "lyft"
+      - "taxi"
+      - "bart"
+      - "caltrain"
+      - "transit"
+      - "public transport"
+    confidence: 0.9
+
+  # Shopping & Personal
+  - category: "Shopping"  # Matches "🛍️ Shopping"
+    keywords:
+      - "shopping"
+      - "clothes"
+      - "clothing"
+      - "shoes"
+      - "apparel"
+    confidence: 0.85
+
+  - category: "Entertainment"  # Matches "🎬 Entertainment"
+    keywords:
+      - "movie"
+      - "theater"
+      - "cinema"
+      - "netflix"
+      - "spotify"
+      - "hulu"
+      - "entertainment"
+      - "game"
+      - "concert"
+    confidence: 0.9
+
+  # Pet-related
+  - category: "Mochi"  # Matches "🐶 Mochi"
+    keywords:
+      - "dog"
+      - "pet"
+      - "petco"
+      - "petsmart"
+      - "vet"
+      - "veterinary"
+      - "mochi"
+      - "dog food"
+      - "pet food"
+    confidence: 0.95
+
+  # Self-care & Health
+  - category: "Health"  # Matches "🩺 Health"
+    keywords:
+      - "pharmacy"
+      - "cvs"
+      - "walgreens"
+      - "medicine"
+      - "prescription"
+      - "doctor"
+      - "medical"
+      - "health"
+    confidence: 0.9
+
+  - category: "Self Care"  # Matches "🌸 Self Care"
+    keywords:
+      - "salon"
+      - "spa"
+      - "massage"
+      - "haircut"
+      - "beauty"
+      - "cosmetics"
+      - "skincare"
+    confidence: 0.9
+
+# LLM Configuration (Phase 3)
+llm:
+  provider: "anthropic"
+  model: "claude-3-haiku-20240307"
+  confidence_threshold: 0.8  # Higher threshold for LLM (more uncertain)
+
+  # Force LLM classification (skip keyword rules) for specific sources
+  # This is useful for Amazon where product names are very specific and LLM
+  # understands product semantics better than generic keyword matching
+  # Cost impact: ~$0.00015 per transaction (~$0.03/month for 200 transactions)
+  force_llm_for:
+    - "amazon"  # Use LLM-first for all Amazon transactions
+
+# Conservative settings
+conservative:
+  minimum_confidence: 0.75
+  skip_on_uncertainty: true
+  log_uncertain: true  # Log to classification_uncertain.log
+
+# Learning system configuration (Phase 7)
+learning:
+  last_checkpoint: null  # Will be set to ISO timestamp after first learning run
+  enabled: true
