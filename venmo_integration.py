@@ -28,6 +28,13 @@ class VenmoIntegration:
         self.venmo_account_id = None  # Will be set when we fetch accounts
         self._account_cache = {}  # Cache for account ID lookups
 
+        # Track classification statistics
+        self.classification_stats = {
+            'attempted': 0,
+            'classified': 0,
+            'no_match': 0
+        }
+
     def parse_email(self, email_dict: Dict) -> Optional[Dict]:
         """
         Parse Venmo transaction notification email
@@ -204,13 +211,22 @@ class VenmoIntegration:
 
             # Classify transaction if classifier is available
             if self.category_classifier:
+                self.classification_stats['attempted'] += 1
+
+                # Extract text for classification
+                text = f"{txn['name']} {txn.get('description', '')}".strip()
+                print(f"    🤖 Attempting to classify: '{text}'...")
+
                 category_id = self.category_classifier.classify_venmo_transaction(txn)
                 if category_id:
+                    self.classification_stats['classified'] += 1
                     category_name = self.category_classifier.get_category_name(category_id)
                     txn['category_id'] = category_id
-                    print(f"    💡 Suggested category: {category_name}")
+                    print(f"    ✓ Suggested category: {category_name}")
                 else:
+                    self.classification_stats['no_match'] += 1
                     txn['category_id'] = None
+                    print(f"    ⚠ No confident category classification found")
             else:
                 txn['category_id'] = None
 

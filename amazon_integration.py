@@ -29,6 +29,13 @@ class AmazonIntegration:
         self.dry_run = dry_run
         self.category_classifier = category_classifier
 
+        # Track classification statistics
+        self.classification_stats = {
+            'attempted': 0,
+            'classified': 0,
+            'no_match': 0
+        }
+
     def _extract_return_item_name(self, subject: str) -> Optional[str]:
         """
         Extract item name from return email subject
@@ -559,8 +566,15 @@ class AmazonIntegration:
 
                 # Classify and update category if classifier is available
                 if self.category_classifier and ynab_match and update_success:
+                    self.classification_stats['attempted'] += 1
+
+                    # Extract item name for classification
+                    item_name = txn.get('item_name_from_subject') or (txn.get('items', [{}])[0] if txn.get('items') else None)
+                    print(f"      🤖 Attempting to classify: '{item_name}'...")
+
                     category_id = self.category_classifier.classify_amazon_transaction(txn, ynab_match)
                     if category_id:
+                        self.classification_stats['classified'] += 1
                         category_name = self.category_classifier.get_category_name(category_id)
 
                         # Show classification method
@@ -574,6 +588,9 @@ class AmazonIntegration:
                                 print(f"      ✓ Set category: {category_name} ({method})")
                             else:
                                 print(f"      ✗ Failed to set category")
+                    else:
+                        self.classification_stats['no_match'] += 1
+                        print(f"      ⚠ No confident category classification found")
 
                 matches.append({
                     'amazon': txn,

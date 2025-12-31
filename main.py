@@ -202,6 +202,22 @@ def main():
             else:
                 print(f"✓ Successfully created {len(venmo_transactions)} YNAB transaction(s) from Venmo")
 
+        # Print category classification summary
+        amazon_stats = amazon_integration.classification_stats
+        venmo_stats = venmo_integration.classification_stats
+        total_attempted = amazon_stats['attempted'] + venmo_stats['attempted']
+        total_classified = amazon_stats['classified'] + venmo_stats['classified']
+        total_no_match = amazon_stats['no_match'] + venmo_stats['no_match']
+
+        if total_attempted > 0:
+            print(f"\n🤖 Category Classification:")
+            print(f"  Total attempted: {total_attempted}")
+            print(f"  Successfully classified: {total_classified}")
+            print(f"  No confident match: {total_no_match}")
+            if total_attempted > 0:
+                coverage = (total_classified / total_attempted) * 100
+                print(f"  Coverage: {coverage:.1f}%")
+
         print("\n" + "=" * 80)
 
     print("\n✓ YNABify completed successfully!")
