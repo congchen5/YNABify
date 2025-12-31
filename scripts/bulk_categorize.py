@@ -2,9 +2,11 @@
 """
 Bulk Category Classification Script
 
-Applies CategoryClassifier to ALL existing YNAB transactions across all accounts.
-By default, processes ALL transactions (even those with existing categories) because
-YNAB's auto-categorization is often incorrect.
+Applies CategoryClassifier to unapproved YNAB transactions across all accounts.
+
+IMPORTANT: Only processes UNAPPROVED transactions. Approved transactions are skipped
+to preserve your manual categorization work. Once you approve a transaction in YNAB,
+the bulk categorization script will never modify it.
 
 Usage:
     python scripts/bulk_categorize.py [--days DAYS] [--skip-categorized] [--dry-run]
@@ -94,6 +96,12 @@ def bulk_categorize_transactions(
 
     for txn in transactions:
         stats['processed'] += 1
+
+        # IMPORTANT: Skip approved transactions (user has manually reviewed these)
+        # We only want to categorize unapproved transactions
+        if txn.approved:
+            stats['skipped'] += 1
+            continue
 
         # Optional: Skip if already categorized (opt-in flag)
         if txn.category_id and skip_categorized:
@@ -212,11 +220,11 @@ def main():
 
     print(f"\n📊 Statistics:")
     print(f"  Total processed: {stats['processed']}")
+    print(f"  Skipped (approved transactions): {stats['skipped']}")
     print(f"  Classified: {stats['classified']}")
     print(f"    - Updated (had category): {stats['updated']}")
     print(f"    - Newly classified (no category): {stats['newly_classified']}")
     print(f"  No match: {stats['no_match']}")
-    print(f"  Skipped (already categorized): {stats['skipped']}")
     print(f"  Errors: {stats['errors']}")
 
     # Calculate coverage percentage
