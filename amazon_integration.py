@@ -584,7 +584,7 @@ class AmazonIntegration:
                         if self.dry_run:
                             print(f"      [DRY RUN] Would set category: {category_name} ({method})")
                         else:
-                            if self.ynab_client.update_transaction_category(ynab_match.id, category_id):
+                            if self.ynab_client.update_transaction_category(ynab_match.id, category_id, ynab_match):
                                 print(f"      ✓ Set category: {category_name} ({method})")
                             else:
                                 print(f"      ✗ Failed to set category")

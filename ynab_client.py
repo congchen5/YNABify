@@ -113,7 +113,8 @@ class YNABClient:
     def update_transaction_category(
         self,
         transaction_id: str,
-        category_id: str
+        category_id: str,
+        existing_transaction=None
     ) -> bool:
         """
         Update the category of an existing transaction
@@ -121,18 +122,40 @@ class YNABClient:
         Args:
             transaction_id: YNAB transaction ID
             category_id: YNAB category ID
+            existing_transaction: The existing YNAB transaction object (optional, will fetch if not provided)
 
         Returns:
             True if successful, False otherwise
         """
         try:
-            transaction = TransactionRequest(category_id=category_id)
+            # If we don't have the transaction object, fetch it
+            if existing_transaction is None:
+                result = self.transactions_api.get_transaction_by_id(
+                    self.budget_id,
+                    transaction_id
+                )
+                existing_transaction = result.data.transaction
+
+            # Create transaction request with ALL existing data plus new category
+            transaction = TransactionRequest(
+                account_id=existing_transaction.account_id,
+                date=str(existing_transaction.date),
+                amount=existing_transaction.amount,
+                payee_id=existing_transaction.payee_id,
+                payee_name=existing_transaction.payee_name,
+                category_id=category_id,
+                memo=existing_transaction.memo,
+                cleared=existing_transaction.cleared,
+                approved=existing_transaction.approved,
+                flag_color=existing_transaction.flag_color,
+                import_id=existing_transaction.import_id
+            )
+
             self.transactions_api.update_transaction(
                 self.budget_id,
                 transaction_id,
                 transaction
             )
-            print(f"Updated transaction {transaction_id} category")
             return True
         except Exception as e:
             print(f"Error updating transaction: {e}")

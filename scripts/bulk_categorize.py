@@ -154,7 +154,7 @@ def bulk_categorize_transactions(
 
                 # Update transaction category
                 if not dry_run:
-                    success = ynab_client.update_transaction_category(txn.id, category_id)
+                    success = ynab_client.update_transaction_category(txn.id, category_id, txn)
                     if not success:
                         print(f"    ✗ Failed to update category")
                         stats['errors'] += 1
