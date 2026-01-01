@@ -17,6 +17,26 @@
   - `venmo_integration.py`: Processes Venmo transaction emails
   - `email_client.py`: Handles Gmail IMAP connections
   - `ynab_client.py`: Handles YNAB API interactions
+  - `category_classifier.py`: LLM-based category classification using Claude Haiku
+
+### Family Context (for Category Classification)
+**Immediate Family:**
+- **Cong Chen**: User (works at Superhuman, previously Grammarly)
+- **Margaret (Margi) Kim**: Cong's wife (works at Stripe)
+- **Luca Hyunjin Chen**: Son (born Nov 28, 2024)
+- **Mochi Kim**: Family dog
+
+**Extended Family:**
+- **Rachael Kim**: Margi's younger sister
+- **Sahee Kim**: Margi's older sister
+- **Herman Wong**: Sahee's husband
+- **Jieun (Angela) Kim**: Margi's mother (mother-in-law)
+- **Steve Kim**: Margi's father
+- **Jinsong (Jason) Chen**: Cong's father
+
+**Employment & Income:**
+- Cong works at **Superhuman** (previously Grammarly) → income transactions from these should be "Inflow: Ready to Assign"
+- Margi works at **Stripe** → income transactions from Stripe should be "Inflow: Ready to Assign"
 
 ### Running the Project
 - Use virtual environment: `source venv/bin/activate`
