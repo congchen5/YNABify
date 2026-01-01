@@ -1,213 +1,358 @@
-# Category Classification Rules
-# Rules are generic across all platforms (Amazon, Venmo, etc.)
-# Category names must match EXACTLY what exists in YNAB (fuzzy matching handles emojis)
-
 rules:
-  # Luca-related purchases
-  - category: "Consumables"  # Matches "👶 Consumables"
-    keywords:
-      - "baby wipes"
-      - "diapers"
-      - "diaper"
-      - "formula"
-      - "baby food"
-      - "pacifier"
-      - "baby"
-      - "infant"
-      - "pampers"
-      - "huggies"
-    confidence: 0.95
+# Storage
+- category: "📦 Storage Unit"
+  keywords:
+  - bayareaselfstorage
+  - storage
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.018289'
+  sample_count: 3
 
-  - category: "Gear & Clothing"  # Matches "👕 Gear & Clothing"
-    keywords:
-      - "onesie"
-      - "baby clothes"
-      - "stroller"
-      - "car seat"
-      - "crib"
-      - "baby gear"
-    confidence: 0.9
+# Home & Housing
+- category: "🏠 Home Expense"
+  keywords:
+  - home
+  - depot
+  - lowes
+  - hardware
+  - led
+  - tray
+  - mattress
+  - lights
+  - cabinets
+  - ethernet
+  - tool
+  - paint
+  - lumber
+  - paper towel
+  - trash bag
+  - cleaner
+  - detergent
+  - soap
+  - sponge
+  - household
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.018411'
+  sample_count: 54
 
-  # Food & Dining
-  - category: "Groceries"  # Matches "🥦 Groceries"
-    keywords:
-      - "groceries"
-      - "safeway"
-      - "whole foods"
-      - "trader joe"
-      - "costco"
-      - "target"
-      - "walmart"
-      - "food"
-      - "snack"
-      - "protein bar"
-      - "vitamins"
-      - "milk"
-      - "eggs"
-      - "produce"
-      - "meat"
-      - "cheese"
-    confidence: 0.95
+- category: "🏡 Tanglewood Mortgage"
+  keywords:
+  - tanglewood
+  - mortgage
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.018419'
+  sample_count: 3
 
-  - category: "Restaurants"  # Matches "🍽️ Restaurants"
-    keywords:
-      - "restaurant"
-      - "pizza"
-      - "burger"
-      - "sushi"
-      - "doordash"
-      - "uber eats"
-      - "grubhub"
-      - "takeout"
-      - "delivery"
-      - "dine"
-      - "dining"
-    confidence: 0.9
+- category: "🌷Gardening"
+  keywords:
+  - gardening
+  - miguel
+  - gutierrez
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.018441'
+  sample_count: 4
 
-  - category: "Cafe & Coffee"  # Matches "☕️ Cafe & Coffee"
-    keywords:
-      - "coffee"
-      - "cafe"
-      - "starbucks"
-      - "philz"
-      - "peet"
-      - "espresso"
-      - "latte"
-    confidence: 0.95
+- category: "🧹 Cleaning"
+  keywords:
+  - cleaning
+  - yoselin
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.019024'
+  sample_count: 4
 
-  # Home & Household
-  - category: "Home Expense"  # Matches "🏠 Home Expense"
-    keywords:
-      - "home depot"
-      - "lowes"
-      - "ace hardware"
-      - "hardware"
-      - "tool"
-      - "paint"
-      - "lumber"
-      - "home improvement"
-      - "paper towel"
-      - "trash bag"
-      - "cleaner"
-      - "detergent"
-      - "soap"
-      - "sponge"
-      - "household"
-    confidence: 0.9
+# Food & Dining
+- category: "🥦 Groceries"
+  keywords:
+  - groceries
+  - foods
+  - whole
+  - costco
+  - safeway
+  - target
+  - walmart
+  - pharmacy
+  - cvs
+  - overnight
+  - oats
+  - joe
+  - trader
+  - food
+  - snack
+  - protein bar
+  - vitamins
+  - milk
+  - eggs
+  - produce
+  - meat
+  - cheese
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.018673'
+  sample_count: 67
 
-  # Transportation
-  - category: "Fuel"  # Matches "⛽️ Fuel"
-    keywords:
-      - "gas"
-      - "fuel"
-      - "shell"
-      - "chevron"
-      - "arco"
-      - "76"
-      - "exxon"
-      - "mobil"
-    confidence: 0.95
+- category: "🍽️ Restaurants"
+  keywords:
+  - restaurant
+  - farms
+  - mendocino
+  - town
+  - dumpling
+  - chick
+  - fil
+  - super
+  - duper
+  - pizza
+  - burger
+  - sushi
+  - doordash
+  - uber eats
+  - grubhub
+  - takeout
+  - delivery
+  - dine
+  - dining
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.018546'
+  sample_count: 50
 
-  - category: "Parking"  # Matches "🅿️ Parking"
-    keywords:
-      - "parking"
-      - "parkme"
-      - "spothero"
-      - "park"
-    confidence: 0.95
+- category: "☕️ Cafe & Coffee"
+  keywords:
+  - coffee
+  - blue
+  - bottle
+  - cafe
+  - cruel
+  - donuts
+  - bakery
+  - starbucks
+  - philz
+  - peet
+  - espresso
+  - latte
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.018606'
+  sample_count: 34
 
-  - category: "Transportation"  # Matches "🚌 Transportation"
-    keywords:
-      - "uber"
-      - "lyft"
-      - "taxi"
-      - "bart"
-      - "caltrain"
-      - "transit"
-      - "public transport"
-    confidence: 0.9
+# Luca (your son)
+- category: "👶 Luca Consumables"
+  keywords:
+  - luca
+  - baby wipes
+  - diapers
+  - diaper
+  - formula
+  - baby food
+  - pacifier
+  - baby
+  - infant
+  - pampers
+  - huggies
+  - clothes
+  - swim
+  - onesie
+  - baby clothes
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.018784'
+  sample_count: 49
 
-  # Shopping & Personal
-  - category: "Shopping"  # Matches "🛍️ Shopping"
-    keywords:
-      - "shopping"
-      - "clothes"
-      - "clothing"
-      - "shoes"
-      - "apparel"
-    confidence: 0.85
+- category: "🏫 Luca Day Care"
+  keywords:
+  - daycare
+  - wong
+  - tricia
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.019064'
+  sample_count: 7
 
-  - category: "Entertainment"  # Matches "🎬 Entertainment"
-    keywords:
-      - "movie"
-      - "theater"
-      - "cinema"
-      - "netflix"
-      - "spotify"
-      - "hulu"
-      - "entertainment"
-      - "game"
-      - "concert"
-    confidence: 0.9
+# Travel & Transportation
+- category: "✈️ Travel"
+  keywords:
+  - travel
+  - bachelorette
+  - mariah
+  - hotel
+  - flight
+  - airbnb
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.018812'
+  sample_count: 18
 
-  # Pet-related
-  - category: "Mochi"  # Matches "🐶 Mochi"
-    keywords:
-      - "dog"
-      - "pet"
-      - "petco"
-      - "petsmart"
-      - "vet"
-      - "veterinary"
-      - "mochi"
-      - "dog food"
-      - "pet food"
-    confidence: 0.95
+# Personal Care & Health
+- category: "❤️‍🩹 Cong Therapy"
+  keywords:
+  - headway
+  - therapy
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.018456'
+  sample_count: 13
 
-  # Self-care & Health
-  - category: "Health"  # Matches "🩺 Health"
-    keywords:
-      - "pharmacy"
-      - "cvs"
-      - "walgreens"
-      - "medicine"
-      - "prescription"
-      - "doctor"
-      - "medical"
-      - "health"
-    confidence: 0.9
+- category: "🌸 Self Care"
+  keywords:
+  - hair
+  - salon
+  - spa
+  - massage
+  - haircut
+  - beauty
+  - cosmetics
+  - skincare
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.018883'
+  sample_count: 14
 
-  - category: "Self Care"  # Matches "🌸 Self Care"
-    keywords:
-      - "salon"
-      - "spa"
-      - "massage"
-      - "haircut"
-      - "beauty"
-      - "cosmetics"
-      - "skincare"
-    confidence: 0.9
+# Fitness
+- category: "🏋️ Cong Fitness"
+  keywords:
+  - crunch
+  - fitness
+  - gym
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.018945'
+  sample_count: 4
 
-# LLM Configuration (Phase 3)
+- category: "🤸‍♀️ Margi Fitness"
+  keywords:
+  - total
+  - core
+  - margi fitness
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.019015'
+  sample_count: 3
+
+# Pets
+- category: "🐶 Mochi"
+  keywords:
+  - mochi
+  - dog
+  - pet
+  - petco
+  - petsmart
+  - vet
+  - veterinary
+  - dog food
+  - pet food
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.018860'
+  sample_count: 8
+
+# Utilities & Bills
+- category: "💧Water"
+  keywords:
+  - water
+  - california
+  - service
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.018844'
+  sample_count: 4
+
+- category: "🔃 Monthly Subscriptions"
+  keywords:
+  - prime
+  - spotify
+  - youtube
+  - premium
+  - netflix
+  - subscription
+  - hulu
+  - entertainment
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.019039'
+  sample_count: 14
+
+# Shopping
+- category: "🛍️ Shopping"
+  keywords:
+  - shark
+  - shopping
+  - apparel
+  - shoes
+  - clothing
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.019085'
+  sample_count: 11
+
+# Financial
+- category: "Tax Payment"
+  keywords:
+  - tax
+  - department
+  - revenue
+  - state
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.018984'
+  sample_count: 15
+
+- category: "🚗 Model Y Lease"
+  keywords:
+  - tran
+  - trnsfr
+  - chase
+  - jpmorgan
+  - tesla
+  - model
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.019001'
+  sample_count: 3
+
+# Reimbursable - REVIEW: May need refinement based on your specific patterns
+- category: "Reimbursable"
+  keywords:
+  - kim
+  - margi
+  - grammarly
+  - reimbursable
+  - reimburse
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.018836'
+  sample_count: 9
+
+# Income - Keep for reference but may not classify properly
+- category: "Inflow: Ready to Assign"
+  keywords:
+  - employer
+  - stripe
+  - grammarly
+  - superhuman
+  - paycheck
+  - salary
+  confidence: 0.85
+  source: learned
+  learned_at: '2025-12-31T18:38:12.018931'
+  sample_count: 34
+
 llm:
-  provider: "anthropic"
-  model: "claude-3-haiku-20240307"
-  confidence_threshold: 0.8  # Higher threshold for LLM (more uncertain)
-
-  # Force LLM classification (skip keyword rules) for specific sources
-  # This is useful for Amazon where product names are very specific and LLM
-  # understands product semantics better than generic keyword matching
-  # Cost impact: ~$0.00015 per transaction (~$0.03/month for 200 transactions)
+  provider: anthropic
+  model: claude-3-haiku-20240307
+  confidence_threshold: 0.8
   force_llm_for:
-    - "amazon"  # Use LLM-first for all Amazon transactions
+  - amazon
 
-# Conservative settings
 conservative:
   minimum_confidence: 0.75
   skip_on_uncertainty: true
-  log_uncertain: true  # Log to classification_uncertain.log
+  log_uncertain: true
 
-# Learning system configuration (Phase 7)
 learning:
-  last_checkpoint: null  # Will be set to ISO timestamp after first learning run
+  last_checkpoint: '2025-12-31T18:38:51.654789'
   enabled: true
