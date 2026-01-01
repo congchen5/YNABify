@@ -17,7 +17,7 @@ from category_classifier import CategoryClassifier
 # Configuration
 DEBUG_TRANSACTION_LIMIT = 1000  # Limit number of transactions to process for debugging
 DATE_BUFFER_DAYS = 5  # Number of days +/- to search for matching transactions
-EMAIL_DAYS_BACK = 10  # Only process emails from the last N days
+EMAIL_DAYS_BACK = 30  # Only process emails from the last N days (temporarily increased to reprocess older emails)
 DRY_RUN = False  # When True, run without making any modifications (no email labels, no YNAB updates)
 
 
@@ -117,9 +117,10 @@ def main():
     # Get recent YNAB transactions for matching
     print("\n=== Fetching Recent YNAB Transactions ===\n")
     from datetime import datetime, timedelta
-    since_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+    # Fetch extra days to account for EMAIL_DAYS_BACK + DATE_BUFFER_DAYS
+    since_date = (datetime.now() - timedelta(days=EMAIL_DAYS_BACK + DATE_BUFFER_DAYS + 5)).strftime('%Y-%m-%d')
     ynab_transactions = ynab_client.get_transactions(since_date=since_date)
-    print(f"Found {len(ynab_transactions)} YNAB transactions in the last 30 days")
+    print(f"Found {len(ynab_transactions)} YNAB transactions since {since_date}")
 
     # Get transactions from email if available
     if email_client:
