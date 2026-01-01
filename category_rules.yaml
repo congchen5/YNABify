@@ -1,4 +1,36 @@
 rules:
+# High-Priority Payee Rules (0.95+ confidence - match first)
+# These are specific people/vendors that should ALWAYS go to the same category
+
+# Employer Income (Cong works at Superhuman/Grammarly, Margi works at Stripe)
+- category: "Inflow: Ready to Assign"
+  keywords:
+  - superhuman
+  - grammarly
+  - stripe
+  - paycheck
+  - salary
+  - employer
+  confidence: 0.95
+  source: manual
+  priority: high
+
+- category: "🏫 Luca Day Care"
+  keywords:
+  - tricia wong
+  - tricia
+  confidence: 0.95
+  source: manual
+  priority: high
+
+- category: "🧹 Cleaning"
+  keywords:
+  - yoselin acuta
+  - yoselin
+  confidence: 0.95
+  source: manual
+  priority: high
+
 # Storage
 - category: "📦 Storage Unit"
   keywords:
