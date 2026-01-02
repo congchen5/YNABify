@@ -374,6 +374,12 @@ If you cannot confidently categorize (confidence < 0.8), respond with:
             category = result.get('category')
             confidence = float(result.get('confidence', 0.0))
 
+            # Extract just the category name if LLM returned "Group: Category" format
+            # We want just "Category" for mapping to YNAB ID
+            if category and ':' in category:
+                # Split on last colon in case category name itself contains colons
+                category = category.split(':', 1)[1].strip()
+
             # Apply LLM confidence threshold
             llm_threshold = self.rules.get('llm', {}).get('confidence_threshold', 0.8)
             if confidence < llm_threshold:
