@@ -110,7 +110,8 @@ class CategoryClassifier:
         if amazon_txn.get('item_name_from_subject'):
             item_name = amazon_txn['item_name_from_subject']
         elif amazon_txn.get('items') and len(amazon_txn['items']) > 0:
-            item_name = amazon_txn['items'][0].get('name')
+            # items is now a list of strings, not dicts
+            item_name = amazon_txn['items'][0]
 
         if not item_name:
             return None
