@@ -130,7 +130,7 @@ def bulk_categorize_transactions(
 
         # Classify using generic classification
         try:
-            category_id = category_classifier.classify_generic_transaction(text)
+            category_id = category_classifier.classify_generic_transaction(text, amount=txn.amount)
 
             if category_id:
                 stats['classified'] += 1

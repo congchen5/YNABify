@@ -99,6 +99,31 @@ class CategoryClassifier:
 
         return text
 
+    def _validate_category_for_amount(self, category_name: str, amount: Optional[int]) -> bool:
+        """
+        Validate that a category is appropriate for the transaction amount direction
+
+        Args:
+            category_name: Category name to validate
+            amount: Transaction amount in YNAB milliunits (negative=outflow, positive=inflow)
+                   None means skip validation
+
+        Returns:
+            True if category is valid for this amount, False otherwise
+        """
+        if not category_name or amount is None:
+            return True  # Skip validation if no amount provided
+
+        # "Inflow: Ready to Assign" should ONLY be used for positive amounts (income)
+        # Never for outflows/expenses (negative amounts)
+        if "Inflow: Ready to Assign" in category_name or "Ready to Assign" in category_name:
+            if amount < 0:
+                # This is an outflow/expense, should NOT be categorized as income
+                print(f"    ⚠ Skipping 'Inflow: Ready to Assign' for outflow transaction (amount: ${amount/1000:.2f})")
+                return False
+
+        return True
+
     def classify_amazon_transaction(self, amazon_txn: Dict, ynab_txn) -> Optional[str]:
         """
         Classify Amazon transaction using item name
@@ -125,6 +150,9 @@ class CategoryClassifier:
         # Clean text before matching (remove URLs, extra whitespace)
         item_name = self._clean_text(item_name)
 
+        # Get transaction amount for validation
+        amount = ynab_txn.amount if hasattr(ynab_txn, 'amount') else None
+
         # Check if LLM should be used first for this source
         force_llm_sources = self.rules.get('llm', {}).get('force_llm_for', [])
         use_llm_first = 'amazon' in [s.lower() for s in force_llm_sources]
@@ -149,6 +177,10 @@ class CategoryClassifier:
                     return None
             else:
                 return None
+
+        # Validate category against transaction type
+        if not self._validate_category_for_amount(category_name, amount):
+            return None
 
         # Map category name to YNAB ID
         if category_name:
@@ -214,12 +246,13 @@ class CategoryClassifier:
 
         return None
 
-    def classify_generic_transaction(self, text: str) -> Optional[str]:
+    def classify_generic_transaction(self, text: str, amount: Optional[int] = None) -> Optional[str]:
         """
         Classify any transaction using generic text (for bulk categorization)
 
         Args:
             text: Payee name, memo, or any transaction text
+            amount: Transaction amount in YNAB milliunits (negative=outflow, positive=inflow)
 
         Returns:
             YNAB category_id or None
@@ -240,6 +273,10 @@ class CategoryClassifier:
             category_name, confidence = self._classify_with_llm(text)
             if confidence < min_confidence:
                 return None
+
+        # Validate category against transaction type
+        if not self._validate_category_for_amount(category_name, amount):
+            return None
 
         # Map category name to YNAB ID
         if category_name:
