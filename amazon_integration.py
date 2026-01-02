@@ -80,6 +80,42 @@ class AmazonIntegration:
 
         return None
 
+    def _extract_return_items_from_body(self, body: str, soup: BeautifulSoup) -> List[str]:
+        """
+        Extract item names from return email body.
+
+        Return emails have the pattern:
+        "Item(s) in your return request      <ITEM_NAME>...      <ITEM_NAME>..."
+
+        Args:
+            body: Email body HTML
+            soup: BeautifulSoup parsed body
+
+        Returns:
+            List of item names extracted from the return email
+        """
+        text = soup.get_text()
+
+        # Look for "Item(s) in your return request" followed by product names
+        # The items section ends at "Quantity:" which comes after the item name
+        pattern = r'Item\(s\)\s+in\s+your\s+return\s+request\s+(.*?)(?:Quantity:|Whole\s+Foods\s+Return)'
+        match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+
+        if match:
+            items_section = match.group(1)
+
+            # Clean up excessive whitespace to single spaces
+            items_text = re.sub(r'\s+', ' ', items_section).strip()
+
+            # The item name is typically the entire text here
+            # Return emails usually have one item per return request
+            if items_text and len(items_text) >= 10:
+                # Decode HTML entities
+                items_text = html.unescape(items_text)
+                return [items_text]
+
+        return []
+
     def _parse_order_sections(self, body: str, soup: BeautifulSoup) -> List[Dict]:
         """
         Parse multiple order sections from a single email.
@@ -288,6 +324,11 @@ class AmazonIntegration:
             # Detect if this is a return transaction
             # Check for both 'return' and 'refund' keywords
             is_return = 'return' in subject.lower() or 'refund' in subject.lower()
+
+            # For return emails, extract items from the body (different HTML structure than order emails)
+            if is_return and not items:
+                items = self._extract_return_items_from_body(body, soup)
+                print(f"  Extracted {len(items)} return items from body")
 
             # Use order_sections if found (handles both single and multi-order cases)
             if order_sections:
