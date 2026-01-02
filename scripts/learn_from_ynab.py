@@ -14,11 +14,13 @@ Features:
 - Marks learned rules with metadata (source: learned, learned_at: timestamp)
 
 Usage:
-    python scripts/learn_from_ynab.py [--dry-run] [--min-frequency MIN]
+    python scripts/learn_from_ynab.py [--dry-run] [--min-frequency MIN] [--reset] [--days-back DAYS]
 
 Options:
     --dry-run           Show what rules would be generated without updating YAML
     --min-frequency MIN Minimum keyword frequency (default: 3)
+    --reset             Ignore checkpoint and learn from all history
+    --days-back DAYS    Days back to learn from when resetting (default: 365)
 """
 
 import os
@@ -114,7 +116,9 @@ def learn_from_approved_transactions(
     config: Dict,
     min_frequency: int = 3,
     dry_run: bool = False,
-    config_path: str = 'category_rules.yaml'
+    config_path: str = 'category_rules.yaml',
+    reset: bool = False,
+    days_back: int = 365
 ) -> List[Dict]:
     """
     Analyze approved transactions and generate new category rules
@@ -125,6 +129,8 @@ def learn_from_approved_transactions(
         min_frequency: Minimum keyword frequency
         dry_run: If True, don't update config file
         config_path: Path to configuration file (default: 'category_rules.yaml')
+        reset: If True, ignore checkpoint and learn from all history
+        days_back: Days back to learn from when resetting (default: 365)
 
     Returns:
         List of new rules generated
@@ -132,14 +138,18 @@ def learn_from_approved_transactions(
     print("\n=== Learning from Approved YNAB Transactions ===\n")
 
     # Get checkpoint timestamp
-    last_checkpoint = config.get('learning', {}).get('last_checkpoint')
-    if last_checkpoint:
-        since_date = last_checkpoint[:10]  # Extract YYYY-MM-DD from ISO timestamp
-        print(f"Incremental learning since last checkpoint: {last_checkpoint}")
+    if reset:
+        since_date = (datetime.now() - timedelta(days=days_back)).strftime('%Y-%m-%d')
+        print(f"RESET MODE: Learning from all history (last {days_back} days, since {since_date})")
     else:
-        # First run: learn from last 90 days
-        since_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
-        print(f"First run: learning from last 90 days (since {since_date})")
+        last_checkpoint = config.get('learning', {}).get('last_checkpoint')
+        if last_checkpoint:
+            since_date = last_checkpoint[:10]  # Extract YYYY-MM-DD from ISO timestamp
+            print(f"Incremental learning since last checkpoint: {last_checkpoint}")
+        else:
+            # First run: learn from last 90 days
+            since_date = (datetime.now() - timedelta(days=90)).strftime('%Y-%m-%d')
+            print(f"First run: learning from last 90 days (since {since_date})")
 
     # Fetch transactions
     print(f"\n📥 Fetching approved transactions since {since_date}...")
@@ -265,6 +275,8 @@ def main():
     parser = argparse.ArgumentParser(description='Learn category rules from approved YNAB transactions')
     parser.add_argument('--dry-run', action='store_true', help='Show what would be learned without updating config')
     parser.add_argument('--min-frequency', type=int, default=3, help='Minimum keyword frequency (default: 3)')
+    parser.add_argument('--reset', action='store_true', help='Ignore checkpoint and learn from all history')
+    parser.add_argument('--days-back', type=int, default=365, help='Days back to learn from when resetting (default: 365)')
     args = parser.parse_args()
 
     # Load environment variables
@@ -298,7 +310,9 @@ def main():
         config=config,
         min_frequency=args.min_frequency,
         dry_run=args.dry_run,
-        config_path=config_path
+        config_path=config_path,
+        reset=args.reset,
+        days_back=args.days_back
     )
 
     # Print summary

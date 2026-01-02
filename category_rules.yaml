@@ -330,6 +330,239 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018931'
   sample_count: 34
+- category: "\U0001FA7A Health"
+  category_group: "\U0001F486\u200D\u2642\uFE0F Personal & Well-Being"
+  keywords:
+  - consultation
+  - lactation
+  - breast
+  - healthy
+  - horizons
+  - health
+  - mho
+  - sutter
+  - system
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.537102'
+  sample_count: 13
+- category: "\U0001F3E6 Le Miccine Mortgage + HOA"
+  category_group: "\U0001F5C4\uFE0F Archive"
+  keywords:
+  - management
+  - american
+  - appfolio
+  - chase
+  - jpmorgan
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.537834'
+  sample_count: 30
+- category: "\U0001F3AC Entertainment"
+  category_group: "\U0001F389 Fun & Lifestyle"
+  keywords:
+  - prime
+  - aquarium
+  - luca
+  - monterey
+  - bay
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.538301'
+  sample_count: 21
+- category: "\U0001F5D1\uFE0F Trash"
+  category_group: "\u26A1 Utilities & Home Operations"
+  keywords:
+  - recology
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.538996'
+  sample_count: 4
+- category: Misc Spending
+  category_group: "\U0001F389 Fun & Lifestyle"
+  keywords:
+  - apple
+  - card
+  - gift
+  - cash
+  - baby
+  - shower
+  - withdrawal
+  - chase
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.539071'
+  sample_count: 30
+- category: "\U0001F3D7\uFE0F Tanglewood Way Remodel"
+  category_group: "\U0001F5C4\uFE0F Archive"
+  keywords:
+  - zelle
+  - judy
+  - zhu
+  - part
+  - check
+  - conf
+  - tanglewood
+  - management
+  - paid
+  - fees
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.539322'
+  sample_count: 40
+- category: Syndicates Investment
+  category_group: "\U0001F4C8 Investments & Long-Term Assets"
+  keywords:
+  - loan
+  - etrade
+  - pmnt
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.539409'
+  sample_count: 12
+- category: "\U0001F6E0\uFE0F Maintenance & Repairs"
+  category_group: "\U0001F697 Auto"
+  keywords:
+  - bmw
+  - model
+  - auto
+  - parts
+  - performance
+  - elite
+  - battery
+  - exhaust
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.539715'
+  sample_count: 18
+- category: "\u26FD\uFE0F Fuel"
+  category_group: "\U0001F697 Auto"
+  keywords:
+  - tesla
+  - supercharger
+  - chevron
+  - fillup
+  - shell
+  - springs
+  - gas
+  - palm
+  - rental
+  - car
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.539758'
+  sample_count: 25
+- category: Cong Personal
+  category_group: "\U0001F389 Fun & Lifestyle"
+  keywords:
+  - s2k
+  - garage
+  - spot
+  - venmo
+  - friend
+  - cong
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.540068'
+  sample_count: 20
+- category: "\U0001FA9E\u2728 Tanglewood Reno Finishing Materials"
+  category_group: "\U0001F5C4\uFE0F Archive"
+  keywords:
+  - zelle
+  - part
+  - judy
+  - han
+  - check
+  - curtains
+  - shower
+  - samples
+  - light
+  - conf
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.540438'
+  sample_count: 62
+- category: "\U0001F4DC Auto Registrations"
+  category_group: "\U0001F697 Auto"
+  keywords:
+  - california
+  - dmv
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.540595'
+  sample_count: 8
+- category: Tanglewood Property Tax
+  category_group: "\U0001F3E0 Essential Fixed Costs"
+  keywords:
+  - smc
+  - tax
+  - collector
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.540606'
+  sample_count: 4
+- category: "\U0001F4C8  Stocks Investment"
+  category_group: "\U0001F4C8 Investments & Long-Term Assets"
+  keywords:
+  - vanguard
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.540654'
+  sample_count: 9
+- category: Home Insurance
+  category_group: "\U0001F3E0 Essential Fixed Costs"
+  keywords:
+  - insurance
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.540676'
+  sample_count: 3
+- category: "\U0001F3F7\uFE0F Selling Le Miccine Home"
+  category_group: "\U0001F5C4\uFE0F Archive"
+  keywords:
+  - miccine
+  - zelle
+  - ter
+  - conf
+  - selling
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.540761'
+  sample_count: 10
+- category: Auto Insurance
+  category_group: "\U0001F3E0 Essential Fixed Costs"
+  keywords:
+  - csaa
+  - insurance
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.540769'
+  sample_count: 3
+- category: Interest & Fees
+  category_group: "\U0001F4C8 Investments & Long-Term Assets"
+  keywords:
+  - monthly
+  - fee
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.540778'
+  sample_count: 3
+- category: "\U0001F3A8 Luca Activities"
+  category_group: "\U0001F476 Luca"
+  keywords:
+  - petite
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.540920'
+  sample_count: 3
+- category: "\U0001F455 Luca Gear & Clothing"
+  category_group: "\U0001F476 Luca"
+  keywords:
+  - luca
+  confidence: 0.85
+  source: learned
+  learned_at: '2026-01-01T23:56:25.541117'
+  sample_count: 4
 llm:
   provider: anthropic
   model: claude-3-haiku-20240307
@@ -341,5 +574,5 @@ conservative:
   skip_on_uncertainty: true
   log_uncertain: true
 learning:
-  last_checkpoint: '2026-01-01T23:53:14.126323'
+  last_checkpoint: '2026-01-01T23:56:25.541144'
   enabled: true
