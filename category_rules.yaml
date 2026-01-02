@@ -1,22 +1,5 @@
 rules:
-# Category Classification Rules
-#
-# Each rule can have the following fields:
-#   - category: YNAB category name (must match exactly, including emojis)
-#   - category_group: (optional) YNAB category group name for context (e.g., "Auto", "Home")
-#   - keywords: list of keywords to match (case-insensitive, word boundary matching)
-#   - confidence: 0.0-1.0 (higher = more certain, affects whether rule is used)
-#   - source: "manual" (hand-written) or "learned" (auto-generated from approved transactions)
-#   - priority: "high" (match before LLM) - optional, only for critical payee rules
-#
-# Category groups provide important context when categories have similar names across groups.
-# Example: "Maintenance & Repairs" in "Auto" group vs "Home Expense" in "Home" group
-#
-# High-Priority Payee Rules (0.95+ confidence - match first)
-# These are specific people/vendors that should ALWAYS go to the same category
-
-# Employer Income (Cong works at Superhuman/Grammarly, Margi works at Stripe)
-- category: "Inflow: Ready to Assign"
+- category: 'Inflow: Ready to Assign'
   keywords:
   - superhuman
   - grammarly
@@ -27,25 +10,21 @@ rules:
   confidence: 0.95
   source: manual
   priority: high
-
-- category: "🏫 Luca Day Care"
+- category: "\U0001F3EB Luca Day Care"
   keywords:
   - tricia wong
   - tricia
   confidence: 0.95
   source: manual
   priority: high
-
-- category: "🧹 Cleaning"
+- category: "\U0001F9F9 Cleaning"
   keywords:
   - yoselin acuta
   - yoselin
   confidence: 0.95
   source: manual
   priority: high
-
-# Storage
-- category: "📦 Storage Unit"
+- category: "\U0001F4E6 Storage Unit"
   keywords:
   - bayareaselfstorage
   - storage
@@ -53,9 +32,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018289'
   sample_count: 3
-
-# Home & Housing
-- category: "🏠 Home Expense"
+- category: "\U0001F3E0 Home Expense"
   keywords:
   - home
   - depot
@@ -81,8 +58,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018411'
   sample_count: 54
-
-- category: "🏡 Tanglewood Mortgage"
+- category: "\U0001F3E1 Tanglewood Mortgage"
   keywords:
   - tanglewood
   - mortgage
@@ -90,8 +66,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018419'
   sample_count: 3
-
-- category: "🌷Gardening"
+- category: "\U0001F337Gardening"
   keywords:
   - gardening
   - miguel
@@ -100,8 +75,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018441'
   sample_count: 4
-
-- category: "🧹 Cleaning"
+- category: "\U0001F9F9 Cleaning"
   keywords:
   - cleaning
   - yoselin
@@ -109,9 +83,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.019024'
   sample_count: 4
-
-# Food & Dining
-- category: "🥦 Groceries"
+- category: "\U0001F966 Groceries"
   keywords:
   - groceries
   - foods
@@ -139,8 +111,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018673'
   sample_count: 67
-
-- category: "🍽️ Restaurants"
+- category: "\U0001F37D\uFE0F Restaurants"
   keywords:
   - restaurant
   - farms
@@ -165,8 +136,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018546'
   sample_count: 50
-
-- category: "☕️ Cafe & Coffee"
+- category: "\u2615\uFE0F Cafe & Coffee"
   keywords:
   - coffee
   - blue
@@ -184,9 +154,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018606'
   sample_count: 34
-
-# Luca (your son)
-- category: "👶 Luca Consumables"
+- category: "\U0001F476 Luca Consumables"
   keywords:
   - luca
   - baby wipes
@@ -207,8 +175,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018784'
   sample_count: 49
-
-- category: "🏫 Luca Day Care"
+- category: "\U0001F3EB Luca Day Care"
   keywords:
   - daycare
   - wong
@@ -217,9 +184,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.019064'
   sample_count: 7
-
-# Travel & Transportation
-- category: "✈️ Travel"
+- category: "\u2708\uFE0F Travel"
   keywords:
   - travel
   - bachelorette
@@ -231,9 +196,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018812'
   sample_count: 18
-
-# Personal Care & Health
-- category: "❤️‍🩹 Cong Therapy"
+- category: "\u2764\uFE0F\u200D\U0001FA79 Cong Therapy"
   keywords:
   - headway
   - therapy
@@ -241,8 +204,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018456'
   sample_count: 13
-
-- category: "🌸 Self Care"
+- category: "\U0001F338 Self Care"
   keywords:
   - hair
   - salon
@@ -256,9 +218,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018883'
   sample_count: 14
-
-# Fitness
-- category: "🏋️ Cong Fitness"
+- category: "\U0001F3CB\uFE0F Cong Fitness"
   keywords:
   - crunch
   - fitness
@@ -267,8 +227,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018945'
   sample_count: 4
-
-- category: "🤸‍♀️ Margi Fitness"
+- category: "\U0001F938\u200D\u2640\uFE0F Margi Fitness"
   keywords:
   - total
   - core
@@ -277,9 +236,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.019015'
   sample_count: 3
-
-# Pets
-- category: "🐶 Mochi"
+- category: "\U0001F436 Mochi"
   keywords:
   - mochi
   - dog
@@ -294,9 +251,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018860'
   sample_count: 8
-
-# Utilities & Bills
-- category: "💧Water"
+- category: "\U0001F4A7Water"
   keywords:
   - water
   - california
@@ -305,8 +260,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018844'
   sample_count: 4
-
-- category: "🔃 Monthly Subscriptions"
+- category: "\U0001F503 Monthly Subscriptions"
   keywords:
   - prime
   - spotify
@@ -320,9 +274,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.019039'
   sample_count: 14
-
-# Shopping
-- category: "🛍️ Shopping"
+- category: "\U0001F6CD\uFE0F Shopping"
   keywords:
   - shark
   - shopping
@@ -333,9 +285,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.019085'
   sample_count: 11
-
-# Financial
-- category: "Tax Payment"
+- category: Tax Payment
   keywords:
   - tax
   - department
@@ -345,8 +295,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018984'
   sample_count: 15
-
-- category: "🚗 Model Y Lease"
+- category: "\U0001F697 Model Y Lease"
   keywords:
   - tran
   - trnsfr
@@ -358,9 +307,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.019001'
   sample_count: 3
-
-# Reimbursable - REVIEW: May need refinement based on your specific patterns
-- category: "Reimbursable"
+- category: Reimbursable
   keywords:
   - kim
   - margi
@@ -371,9 +318,7 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018836'
   sample_count: 9
-
-# Income - Keep for reference but may not classify properly
-- category: "Inflow: Ready to Assign"
+- category: 'Inflow: Ready to Assign'
   keywords:
   - employer
   - stripe
@@ -385,19 +330,16 @@ rules:
   source: learned
   learned_at: '2025-12-31T18:38:12.018931'
   sample_count: 34
-
 llm:
   provider: anthropic
   model: claude-3-haiku-20240307
   confidence_threshold: 0.8
   force_llm_for:
   - amazon
-
 conservative:
   minimum_confidence: 0.75
   skip_on_uncertainty: true
   log_uncertain: true
-
 learning:
-  last_checkpoint: '2025-12-31T18:38:51.654789'
+  last_checkpoint: '2026-01-01T23:53:14.126323'
   enabled: true
