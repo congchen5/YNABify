@@ -122,6 +122,10 @@ def main():
     ynab_transactions = ynab_client.get_transactions(since_date=since_date)
     print(f"Found {len(ynab_transactions)} YNAB transactions since {since_date}")
 
+    # Initialize category classifier (used for both email processing and bulk categorization)
+    print("\n✓ Initializing category classifier")
+    category_classifier = CategoryClassifier(ynab_client)
+
     # Get transactions from email if available
     if email_client:
         print("\n=== Processing Email Transactions ===\n")
@@ -130,10 +134,6 @@ def main():
         # Initialize user detector for multi-user support
         user_detector = UserDetector()
         print("✓ Initialized multi-user support (Cong & Margi)")
-
-        # Initialize category classifier
-        category_classifier = CategoryClassifier(ynab_client)
-        print("✓ Initialized category classifier")
 
         # Initialize integrations
         amazon_integration = AmazonIntegration(ynab_client, email_client, user_detector=user_detector, date_buffer_days=DATE_BUFFER_DAYS, dry_run=DRY_RUN, category_classifier=category_classifier)
@@ -220,6 +220,38 @@ def main():
                 print(f"  Coverage: {coverage:.1f}%")
 
         print("\n" + "=" * 80)
+
+    # Run bulk categorization on all unapproved transactions
+    print("\n=== Running Bulk Categorization ===\n")
+    print("Categorizing all unapproved transactions across all accounts...")
+
+    if not DRY_RUN:
+        try:
+            from scripts.bulk_categorize import bulk_categorize_transactions
+
+            # Run bulk categorization (last 90 days)
+            bulk_stats = bulk_categorize_transactions(
+                ynab_client=ynab_client,
+                category_classifier=category_classifier,
+                days_back=90,
+                skip_categorized=False,
+                account_filter=None,
+                dry_run=False
+            )
+
+            print(f"\n✓ Bulk categorization complete:")
+            print(f"  Total processed: {bulk_stats['processed']}")
+            print(f"  Classified: {bulk_stats['classified']}")
+            print(f"  Updated: {bulk_stats['updated']}")
+            print(f"  Newly classified: {bulk_stats['newly_classified']}")
+            print(f"  No match: {bulk_stats['no_match']}")
+
+        except Exception as e:
+            print(f"⚠ Bulk categorization failed: {e}")
+            import traceback
+            traceback.print_exc()
+    else:
+        print("⚠️  DRY RUN MODE - Skipping bulk categorization")
 
     print("\n✓ YNABify completed successfully!")
 
