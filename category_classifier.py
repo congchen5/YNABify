@@ -31,6 +31,7 @@ class CategoryClassifier:
         self.rules = self._load_rules()
         self.category_cache = {}  # Cache: name -> YNAB category ID
         self.category_id_to_name = {}  # Cache: ID -> name
+        self.category_with_group = {}  # Cache: ID -> {name, group}
         self._initialize_category_cache()
 
         # Initialize LLM client if API key is available
@@ -56,7 +57,7 @@ class CategoryClassifier:
             return {'rules': [], 'conservative': {'minimum_confidence': 0.75}}
 
     def _initialize_category_cache(self):
-        """Fetch YNAB categories and build name->ID and ID->name caches"""
+        """Fetch YNAB categories and build name->ID, ID->name, and ID->{name,group} caches"""
         try:
             category_groups = self.ynab_client.get_categories()
             for group in category_groups:
@@ -66,6 +67,11 @@ class CategoryClassifier:
                             # Store both ways for lookups
                             self.category_cache[cat.name] = cat.id
                             self.category_id_to_name[cat.id] = cat.name
+                            # Store category with group context
+                            self.category_with_group[cat.id] = {
+                                'name': cat.name,
+                                'group': group.name
+                            }
         except Exception as e:
             print(f"⚠ Error fetching YNAB categories: {e}")
 
@@ -307,9 +313,12 @@ class CategoryClassifier:
             return (None, 0.0)
 
         try:
-            # Get available categories for the prompt
-            category_list = [name for name in self.category_cache.keys()]
-            if not category_list:
+            # Get available categories with groups for the prompt
+            categories_with_groups = []
+            for cat_id, cat_info in self.category_with_group.items():
+                categories_with_groups.append(f"{cat_info['group']}: {cat_info['name']}")
+
+            if not categories_with_groups:
                 return (None, 0.0)
 
             # Build structured prompt
@@ -317,17 +326,18 @@ class CategoryClassifier:
 
 Transaction description: "{text}"
 
-Available categories:
-{chr(10).join(f'- {cat}' for cat in sorted(category_list))}
+Available categories (formatted as "Category Group: Category Name"):
+{chr(10).join(f'- {cat}' for cat in sorted(categories_with_groups))}
 
 Analyze the transaction description and determine the most appropriate category. Consider:
 - Product type (baby items, groceries, electronics, pet supplies, etc.)
 - Merchant type (restaurant, pharmacy, retailer, etc.)
 - Context clues in the description
+- Category group context (e.g., "Auto: Maintenance & Repairs" is for car maintenance, NOT home repairs)
 
 Respond ONLY with a JSON object in this exact format:
 {{
-  "category": "category name from the list above",
+  "category": "exact category name from the list above (just the name part after the colon)",
   "confidence": 0.XX (between 0.0 and 1.0, where 1.0 is completely certain),
   "reasoning": "brief explanation"
 }}

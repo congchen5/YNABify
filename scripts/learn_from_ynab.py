@@ -157,39 +157,61 @@ def learn_from_approved_transactions(
         print("\n⚠ No approved transactions found. Nothing to learn.")
         return []
 
-    # Group transactions by category
+    # Build category_id -> {name, group} mapping
+    print("\n🔍 Fetching category groups for context...")
+    category_info = {}  # Map category_id -> {name, group}
+    category_groups = ynab_client.get_categories()
+    for group in category_groups:
+        if hasattr(group, 'categories') and group.categories:
+            for cat in group.categories:
+                if not cat.hidden and not cat.deleted:
+                    category_info[cat.id] = {
+                        'name': cat.name,
+                        'group': group.name
+                    }
+
+    # Group transactions by category (with group context)
     category_patterns = defaultdict(list)
-    category_names = {}  # Map category_id -> name
 
     for txn in approved_txns:
-        category_name = txn.category_name
-        if not category_name:
+        if not txn.category_id or txn.category_id not in category_info:
             continue
 
-        category_names[txn.category_id] = category_name
+        cat_info = category_info[txn.category_id]
+        # Use category name as key (group will be stored separately in the rule)
+        category_name = cat_info['name']
 
         # Extract text for pattern analysis (payee + memo)
         text = f"{txn.payee_name or ''} {txn.memo or ''}".strip()
         if text:
-            category_patterns[category_name].append(text)
+            category_patterns[category_name].append({
+                'text': text,
+                'group': cat_info['group']
+            })
 
     print(f"\n🔍 Analyzing {len(category_patterns)} unique categories...\n")
 
     # Extract keywords for each category
     new_rules = []
-    for category_name, texts in category_patterns.items():
-        if len(texts) < min_frequency:
+    for category_name, data_list in category_patterns.items():
+        if len(data_list) < min_frequency:
             # Not enough data for this category
             continue
+
+        # Extract just the text for keyword analysis
+        texts = [item['text'] for item in data_list]
+        # Get the group (should be same for all items with this category name)
+        category_group = data_list[0]['group'] if data_list else None
 
         keywords = extract_keywords(texts, min_frequency=min_frequency)
 
         if len(keywords) > 0:
-            print(f"📝 {category_name} ({len(texts)} transactions)")
+            print(f"📝 {category_group}: {category_name} ({len(texts)} transactions)")
             print(f"   Keywords: {', '.join(keywords)}")
 
             new_rules.append({
                 'category': category_name,
+                'category_group': category_group,  # NEW: Store group for context
                 'keywords': keywords,
                 'confidence': 0.85,  # Learned rules have medium confidence
                 'source': 'learned',

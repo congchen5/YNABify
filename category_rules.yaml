@@ -1,4 +1,17 @@
 rules:
+# Category Classification Rules
+#
+# Each rule can have the following fields:
+#   - category: YNAB category name (must match exactly, including emojis)
+#   - category_group: (optional) YNAB category group name for context (e.g., "Auto", "Home")
+#   - keywords: list of keywords to match (case-insensitive, word boundary matching)
+#   - confidence: 0.0-1.0 (higher = more certain, affects whether rule is used)
+#   - source: "manual" (hand-written) or "learned" (auto-generated from approved transactions)
+#   - priority: "high" (match before LLM) - optional, only for critical payee rules
+#
+# Category groups provide important context when categories have similar names across groups.
+# Example: "Maintenance & Repairs" in "Auto" group vs "Home Expense" in "Home" group
+#
 # High-Priority Payee Rules (0.95+ confidence - match first)
 # These are specific people/vendors that should ALWAYS go to the same category
 
