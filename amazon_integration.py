@@ -125,27 +125,28 @@ class AmazonIntegration:
                     break
 
             if matching_total:
-                # Extract first item name from this order section
+                # Extract ALL items from this order section
                 # Look for text between this order and the next order (or Grand Total)
                 section_end = total_pos + 100  # Some buffer after Grand Total
                 section_text = text[order_pos:section_end]
 
-                # Try to find item names - look for patterns like "Item Name ... Quantity: N"
-                # Updated: No truncation - capture full item name (up to 200 chars before "Quantity:")
-                item_match = re.search(r'([A-Z][^\n]{10,200}?)\s+Quantity:', section_text)
-                first_item = None
-                if item_match:
-                    first_item = item_match.group(1).strip()
+                # Extract ALL item names - look for patterns like "Item Name ... Quantity: N"
+                # Find all matches, not just the first one
+                item_matches = re.finditer(r'([A-Z][^\n]{10,200}?)\s+Quantity:', section_text)
+                section_items = []
+                for item_match in item_matches:
+                    item_text = item_match.group(1).strip()
                     # Remove all prefixes up to and including "View or edit order" or "View order"
-                    # This handles Unicode characters and varying whitespace
-                    first_item = re.sub(r'^.*?(?:View\s+(?:or\s+edit\s+)?order)\s*', '', first_item, flags=re.IGNORECASE)
-                    first_item = first_item.strip()
-                    # No truncation - show full item name
+                    item_text = re.sub(r'^.*?(?:View\s+(?:or\s+edit\s+)?order)\s*', '', item_text, flags=re.IGNORECASE)
+                    item_text = item_text.strip()
+                    if item_text:
+                        section_items.append(item_text)
 
                 orders_dict[order_num] = {
                     'order_number': order_num,
                     'amount': float(matching_total.replace(',', '')),
-                    'first_item': first_item
+                    'items': section_items,  # All items, not just first_item
+                    'first_item': section_items[0] if section_items else None  # Keep for backwards compat
                 }
 
         return list(orders_dict.values())
@@ -294,13 +295,9 @@ class AmazonIntegration:
                 for section in order_sections:
                     order_details_url = f"https://www.amazon.com/gp/your-account/order-details?orderID={section['order_number']}"
 
-                    # For multi-order emails, use first_item if available, otherwise use extracted items
-                    # Note: extracted items are for the entire email, not per-order
-                    items_for_memo = []
-                    if section.get('first_item'):
-                        items_for_memo = [section['first_item']]
-                    elif items:
-                        items_for_memo = items
+                    # Use items extracted from this specific order section
+                    # If section has its own items, use those; otherwise use general items from email
+                    items_for_memo = section.get('items', []) or items
 
                     transactions.append({
                         'source': 'amazon',
@@ -308,8 +305,8 @@ class AmazonIntegration:
                         'order_details_url': order_details_url,
                         'date': order_date,
                         'amount': section['amount'],
-                        'items': items_for_memo,
-                        'item_name_from_subject': section['first_item'],  # Extracted from body
+                        'items': items_for_memo,  # All items from this order section
+                        'item_name_from_subject': section.get('first_item'),  # First item for classification
                         'description': f"Amazon Order {section['order_number']}",
                         'email_subject': subject,
                         'email_id': email_dict['id'],
