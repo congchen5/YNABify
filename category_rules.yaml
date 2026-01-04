@@ -1,4 +1,24 @@
 rules:
+# High-Priority Recurring Transaction Rules (0.98 confidence - highest priority)
+# These are monthly recurring payments with predictable patterns
+
+- category: "🏡 Tanglewood Mortgage"
+  keywords:
+  - electronic withdrawal
+  confidence: 0.98
+  source: manual
+  priority: high
+
+- category: "🚗 Model Y Lease"
+  keywords:
+  - jpmorgan chase ext trnsfr
+  - lease payment
+  confidence: 0.98
+  source: manual
+  priority: high
+
+# High-Priority Payee Rules (0.95 confidence)
+
 - category: 'Inflow: Ready to Assign'
   keywords:
   - superhuman
