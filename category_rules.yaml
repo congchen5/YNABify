@@ -17,6 +17,15 @@ rules:
   source: manual
   priority: high
 
+- category: "🌷Gardening"
+  keywords:
+  - miguel gutierrez
+  - monthly gardening
+  - gardening
+  confidence: 0.98
+  source: manual
+  priority: high
+
 # High-Priority Payee Rules (0.95 confidence)
 
 - category: 'Inflow: Ready to Assign'
