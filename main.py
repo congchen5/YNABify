@@ -16,7 +16,7 @@ from category_classifier import CategoryClassifier
 
 # Configuration
 DEBUG_TRANSACTION_LIMIT = 1000  # Limit number of transactions to process for debugging
-DATE_BUFFER_DAYS = 5  # Number of days +/- to search for matching transactions
+DATE_BUFFER_DAYS = 10  # Number of days +/- to search for matching transactions
 EMAIL_DAYS_BACK = 30  # Only process emails from the last N days (temporarily increased to reprocess older emails)
 DRY_RUN = False  # When True, run without making any modifications (no email labels, no YNAB updates)
 

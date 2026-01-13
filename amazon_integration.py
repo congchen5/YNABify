@@ -599,6 +599,8 @@ class AmazonIntegration:
                     if self.ynab_client.update_transaction_memo(ynab_match.id, new_memo, ynab_match):
                         print(f"      ✓ Updated YNAB transaction memo")
                         update_success = True
+                        # CRITICAL: Update the cached object's memo so subsequent updates don't overwrite it
+                        ynab_match.memo = new_memo
                     else:
                         print(f"      ✗ Failed to update YNAB transaction memo")
 
