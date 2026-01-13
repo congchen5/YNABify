@@ -477,6 +477,7 @@ rules:
   - palm
   - rental
   - car
+  - costco gas
   confidence: 0.85
   source: learned
   learned_at: '2026-01-01T23:56:25.539758'
