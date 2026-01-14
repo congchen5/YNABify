@@ -26,6 +26,14 @@ rules:
   source: manual
   priority: high
 
+- category: "🎓 Luca College"
+  keywords:
+  - vgi
+  - college fund
+  confidence: 0.98
+  source: manual
+  priority: high
+
 # High-Priority Payee Rules (0.95 confidence)
 
 - category: 'Inflow: Ready to Assign'
