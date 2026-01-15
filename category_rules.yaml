@@ -1,23 +1,18 @@
 rules:
-# High-Priority Recurring Transaction Rules (0.98 confidence - highest priority)
-# These are monthly recurring payments with predictable patterns
-
-- category: "🏡 Tanglewood Mortgage"
+- category: "\U0001F3E1 Tanglewood Mortgage"
   keywords:
   - electronic withdrawal
   confidence: 0.98
   source: manual
   priority: high
-
-- category: "🚗 Model Y Lease"
+- category: "\U0001F697 Model Y Lease"
   keywords:
   - jpmorgan chase ext trnsfr
   - lease payment
   confidence: 0.98
   source: manual
   priority: high
-
-- category: "🌷Gardening"
+- category: "\U0001F337Gardening"
   keywords:
   - miguel gutierrez
   - monthly gardening
@@ -25,17 +20,13 @@ rules:
   confidence: 0.98
   source: manual
   priority: high
-
-- category: "🎓 Luca College"
+- category: "\U0001F393 Luca College"
   keywords:
   - vgi
   - college fund
   confidence: 0.98
   source: manual
   priority: high
-
-# High-Priority Payee Rules (0.95 confidence)
-
 - category: 'Inflow: Ready to Assign'
   keywords:
   - superhuman
@@ -612,5 +603,5 @@ conservative:
   skip_on_uncertainty: true
   log_uncertain: true
 learning:
-  last_checkpoint: '2026-01-01T23:56:25.541144'
+  last_checkpoint: '2026-01-14T16:16:19.976556'
   enabled: true
