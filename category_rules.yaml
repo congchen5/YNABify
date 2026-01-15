@@ -32,9 +32,10 @@ rules:
   - superhuman
   - grammarly
   - stripe
+  - grail
   - paycheck
   - salary
-  - employer
+  - inc
   confidence: 0.95
   source: manual
   priority: high
@@ -348,12 +349,13 @@ rules:
   sample_count: 9
 - category: 'Inflow: Ready to Assign'
   keywords:
-  - employer
   - stripe
   - grammarly
   - superhuman
+  - grail
   - paycheck
   - salary
+  - inc
   confidence: 0.85
   source: learned
   learned_at: '2025-12-31T18:38:12.018931'
