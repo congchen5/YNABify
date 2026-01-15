@@ -76,7 +76,8 @@ class VenmoIntegration:
             text = soup.get_text()
 
             # Look for text between amount and "See transaction"
-            description_pattern = rf'\$\s*{amount:.2f}.*?([A-Za-z0-9\s,\.\-\'"]+?)\s*See transaction'
+            # Include / to handle dates like "1/14 cleaning"
+            description_pattern = rf'\$\s*{amount:.2f}.*?([A-Za-z0-9\s,\.\-\'"/]+?)\s*See transaction'
             desc_match = re.search(description_pattern, text, re.IGNORECASE | re.DOTALL)
 
             description = None
